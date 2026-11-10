@@ -1,0 +1,10 @@
+{
+  "name": "human-resources-management-system",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel --filter api --filter web dev",
+    "test": "pnpm --filter api test",
+    "test:e2e": "pnpm --filter api test:e2e"
+  }
+}
