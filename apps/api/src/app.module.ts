@@ -7,11 +7,20 @@ import { LeaveModule } from './leave/leave.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
 import { EmployeesModule } from './employees/employees.module.js';
 import { AuditModule } from './audit/audit.module.js';
+import { SettingsModule } from './settings/settings.module.js';
 import { JwtAuthGuard } from './auth/jwt-auth.guard.js';
 import { PermissionsGuard } from './auth/permissions.guard.js';
 
 @Module({
-  imports: [PrismaModule, AuthModule, LeaveModule, NotificationsModule, EmployeesModule, AuditModule],
+  imports: [
+    PrismaModule,
+    AuthModule,
+    LeaveModule,
+    NotificationsModule,
+    EmployeesModule,
+    AuditModule,
+    SettingsModule,
+  ],
   controllers: [HealthController],
   providers: [
     {
