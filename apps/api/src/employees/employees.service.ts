@@ -254,10 +254,11 @@ export class EmployeesService {
           }
           visited.add(currentManagerId);
 
-          const mgr = await tx.employee.findUnique({
-            where: { id: currentManagerId },
-            select: { managerId: true },
-          });
+          const mgr: { managerId: string | null } | null =
+            await tx.employee.findUnique({
+              where: { id: currentManagerId },
+              select: { managerId: true },
+            });
           currentManagerId = mgr?.managerId ?? null;
         }
       }
