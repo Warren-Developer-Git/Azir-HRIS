@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "pnpm --parallel --filter api --filter web dev",
+    "db:reset": "pnpm --filter api exec prisma migrate reset --force",
     "test": "pnpm --filter api test",
     "test:e2e": "pnpm --filter api test:e2e"
   }
