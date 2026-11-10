@@ -26,4 +26,21 @@ export class AuditService {
       },
     });
   }
+
+  async list(tx: Prisma.TransactionClient, tenantId: string, limit = 50) {
+    return tx.auditLog.findMany({
+      where: { tenantId },
+      include: {
+        actor: {
+          select: {
+            id: true,
+            email: true,
+            employee: { select: { firstName: true, lastName: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+  }
 }

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { Shield, ArrowRight, Loader2, KeyRound } from 'lucide-react';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function LoginPage() {
   const { login, user, isLoading } = useAuth();
@@ -50,7 +51,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-neutral-50 dark:bg-neutral-950">
+    <div className="relative min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-neutral-50 dark:bg-neutral-950">
+      <div className="absolute top-6 right-6">
+        <ThemeToggle />
+      </div>
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 mb-4 shadow-sm">
           <Shield className="w-6 h-6" />

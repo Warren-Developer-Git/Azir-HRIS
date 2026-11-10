@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../lib/auth-context';
+import { ThemeToggle } from './theme-toggle';
 import {
   LayoutDashboard,
   CalendarDays,
@@ -81,13 +82,16 @@ export function AppSidebar() {
       {/* Mobile top bar */}
       <div className="md:hidden flex items-center justify-between p-4 border-b border-neutral-200 bg-white dark:bg-black dark:border-neutral-800">
         <div className="font-bold text-lg tracking-tight">HRMS</div>
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="p-1.5 rounded border border-neutral-300 dark:border-neutral-700"
-          aria-label="Toggle Navigation"
-        >
-          {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="p-1.5 rounded border border-neutral-300 dark:border-neutral-700"
+            aria-label="Toggle Navigation"
+          >
+            {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
 
       {/* Overlay for mobile */}
@@ -106,11 +110,14 @@ export function AppSidebar() {
       >
         <div>
           {/* Header */}
-          <div className="p-6 border-b border-neutral-100 dark:border-neutral-900">
-            <div className="text-xl font-bold tracking-tight">HRMS</div>
-            <div className="text-xs text-neutral-500 font-medium truncate mt-0.5">
-              {user?.tenantName || 'Human Resources'}
+          <div className="p-6 border-b border-neutral-100 dark:border-neutral-900 flex items-center justify-between">
+            <div className="min-w-0">
+              <div className="text-xl font-bold tracking-tight">HRMS</div>
+              <div className="text-xs text-neutral-500 font-medium truncate mt-0.5">
+                {user?.tenantName || 'Human Resources'}
+              </div>
             </div>
+            <ThemeToggle />
           </div>
 
           {/* Navigation links */}
