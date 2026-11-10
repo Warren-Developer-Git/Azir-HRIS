@@ -263,6 +263,28 @@ export async function resetAndSeedTestDb(ownerDb: PrismaClient) {
     },
   });
 
+  const bynHr = await ownerDb.user.create({
+    data: {
+      tenantId: bayanihan.id,
+      email: 'hr@bayanihan.test',
+      passwordHash,
+      roles: ['HR', 'EMPLOYEE'],
+    },
+  });
+  await ownerDb.employee.create({
+    data: {
+      tenantId: bayanihan.id,
+      userId: bynHr.id,
+      employeeNo: 'BYN-002',
+      firstName: 'Leni',
+      lastName: 'Robredo',
+      position: 'HR Officer',
+      hireDate: new Date('2024-01-01'),
+      gender: 'FEMALE',
+      maritalStatus: 'SINGLE',
+    },
+  });
+
   // Annual Grants for Acme
   for (const empRecord of [depthead, admin, hr, hr2, manager, employee, dev1]) {
     await ownerDb.leaveLedgerEntry.createMany({
