@@ -9,6 +9,20 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: "/settings/departments",
+        destination: "/settings",
+        permanent: false,
+      },
+      {
+        source: "/audit",
+        destination: "/audit-logs",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

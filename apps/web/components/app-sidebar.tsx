@@ -57,13 +57,13 @@ export function AppSidebar() {
     },
     {
       label: 'Settings',
-      href: '/settings/departments',
+      href: '/settings',
       icon: Sliders,
       visible: can('department.write'),
     },
     {
       label: 'Audit Log',
-      href: '/audit',
+      href: '/audit-logs',
       icon: ShieldCheck,
       visible: can('audit.read'),
     },
