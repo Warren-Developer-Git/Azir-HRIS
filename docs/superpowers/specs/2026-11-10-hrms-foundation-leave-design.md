@@ -138,6 +138,7 @@ Simple role-based landing pages: Employee (balances, recent requests), Manager (
 - **No heavy work in request handlers** — nothing heavy exists in Milestone 1, so no queue yet. Documented as a rule in ARCHITECTURE.md.
 - **Scale:** documented in ARCHITECTURE.md (partitioning, keyset pagination, pooling, caching, queues) but not built. Deliberate shortcuts carry `shortcut: <ceiling>, <upgrade trigger>` comments (Ponytail convention).
 - **Frontend:** Next.js App Router, Tailwind CSS + shadcn/ui, responsive (phone + desktop), accessibility first per ui-ux-pro-max.
+- **Visual style (owner's choice): black and white.** Monochrome palette (black, white, greys) for typography and UI. *My call:* statuses (pending/approved/rejected) are shown with text labels + icons + grey shades, not colour. A single red is allowed only for errors and destructive actions (accessibility). Font pairing and spacing: via ui-ux-pro-max.
 - **Testing:** API unit/integration tests (Jest, NestJS default) against a real Postgres for RLS, permissions, balance math, day counting, and the approval state machine. One Playwright end-to-end happy path (submit → manager → HR → balance updated) if time allows. GitHub Actions CI is a stretch goal.
 - **Docs:** README (what it is, screenshots, how to run, demo accounts, roadmap, shortcut ledger), ARCHITECTURE.md (rules from the brainstorm), short decision records (stack, RLS, Prisma, ledger balances).
 
