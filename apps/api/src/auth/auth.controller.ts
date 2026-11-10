@@ -1,0 +1,53 @@
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Res,
+  Req,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import { AuthService } from './auth.service.js';
+import { LoginDto } from './dto/login.dto.js';
+import { Public, CurrentUser } from './decorators.js';
+import type { Request, Response } from 'express';
+import type { AuthUser } from './permissions.js';
+
+@Controller('auth')
+export class AuthController {
+  constructor(private readonly authService: AuthService) {}
+
+  @Public()
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  async login(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.authService.login(dto, res);
+  }
+
+  @Public()
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const refreshToken = req.cookies?.['refresh'];
+    return this.authService.refresh(refreshToken, res);
+  }
+
+  @Public()
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  logout(@Res({ passthrough: true }) res: Response) {
+    return this.authService.logout(res);
+  }
+
+  @Get('me')
+  async getMe(@CurrentUser() user: AuthUser) {
+    return this.authService.getMe(user.userId, user.tenantId);
+  }
+}

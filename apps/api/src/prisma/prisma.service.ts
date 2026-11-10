@@ -1,4 +1,9 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Optional,
+  OnModuleInit,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { PrismaClient, Prisma } from '@prisma/client';
 
 export interface LoginLookupResult {
@@ -13,7 +18,7 @@ export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
-  constructor(options?: Prisma.PrismaClientOptions) {
+  constructor(@Optional() options?: Prisma.PrismaClientOptions) {
     super(
       options ?? {
         datasources: {
