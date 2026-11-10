@@ -3,10 +3,12 @@ import {
   BadRequestException,
   ConflictException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { BalancesService } from './balances.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { Clock } from './clock.js';
 import {
   todayInManila,
@@ -16,6 +18,7 @@ import {
 } from './leave-rules.js';
 import { CreateLeaveRequestDto } from './dto/create-leave-request.dto.js';
 import { UpdateLeaveRequestDto } from './dto/update-leave-request.dto.js';
+import { DecideLeaveRequestDto } from './dto/decide-leave-request.dto.js';
 import { AuthUser, hasPermission } from '../auth/permissions.js';
 
 @Injectable()
@@ -25,6 +28,7 @@ export class LeaveRequestsService {
     private readonly auditService: AuditService,
     private readonly balancesService: BalancesService,
     private readonly clock: Clock,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async fileRequest(user: AuthUser, dto: CreateLeaveRequestDto) {
@@ -171,6 +175,15 @@ export class LeaveRequestsService {
         entityId: created.id,
         after: created,
       });
+
+      if (hasActiveManager && employee.manager?.userId) {
+        await this.notificationsService.notify(tx, {
+          tenantId: user.tenantId,
+          recipientUserIds: [employee.manager.userId],
+          message: `${employee.firstName} ${employee.lastName} requested ${days} day(s) of ${leaveType.name}.`,
+          link: `/approvals?id=${created.id}`,
+        });
+      }
 
       return created;
     });
@@ -430,6 +443,193 @@ export class LeaveRequestsService {
       });
 
       return updated;
+    });
+  }
+
+  async decideRequest(
+    user: AuthUser,
+    id: string,
+    dto: DecideLeaveRequestDto,
+  ) {
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!UUID_REGEX.test(id)) {
+      throw new NotFoundException('Leave request not found');
+    }
+
+    if (dto.decision === 'REJECTED' && (!dto.comment || !dto.comment.trim())) {
+      throw new BadRequestException('A reason is required to reject');
+    }
+
+    return this.prisma.withTenant(user.tenantId, async (tx) => {
+      const req = await tx.leaveRequest.findFirst({
+        where: { id, tenantId: user.tenantId },
+        include: {
+          employee: {
+            include: {
+              user: true,
+            },
+          },
+          leaveType: true,
+        },
+      });
+
+      if (!req) {
+        throw new NotFoundException('Leave request not found');
+      }
+
+      let step: 'MANAGER' | 'HR';
+      let nextStatus: 'PENDING_HR' | 'APPROVED' | 'REJECTED';
+
+      if (req.status === 'PENDING_MANAGER') {
+        const canApproveAsManager =
+          hasPermission(user, 'leave.approve.manager') &&
+          req.employee.managerId === user.employeeId;
+
+        if (!canApproveAsManager) {
+          throw new NotFoundException('Leave request not found');
+        }
+
+        step = 'MANAGER';
+        nextStatus = dto.decision === 'APPROVED' ? 'PENDING_HR' : 'REJECTED';
+      } else if (req.status === 'PENDING_HR') {
+        if (!hasPermission(user, 'leave.approve.hr')) {
+          throw new NotFoundException('Leave request not found');
+        }
+
+        if (req.employeeId === user.employeeId) {
+          throw new ForbiddenException('You cannot approve your own request');
+        }
+
+        step = 'HR';
+        nextStatus = dto.decision === 'APPROVED' ? 'APPROVED' : 'REJECTED';
+      } else {
+        throw new ConflictException('This request was already decided');
+      }
+
+      // Optimistic concurrency control / row state match
+      const updateResult = await tx.leaveRequest.updateMany({
+        where: {
+          id: req.id,
+          status: req.status,
+        },
+        data: {
+          status: nextStatus,
+        },
+      });
+
+      if (updateResult.count === 0) {
+        throw new ConflictException('This request was already decided');
+      }
+
+      // Record approval
+      await tx.leaveApproval.create({
+        data: {
+          tenantId: user.tenantId,
+          requestId: req.id,
+          step,
+          approverId: user.employeeId,
+          decision: dto.decision,
+          comment: dto.comment?.trim() || null,
+        },
+      });
+
+      // If HR approved and YEARLY kind, deduct from ledger
+      if (nextStatus === 'APPROVED' && req.leaveType.kind === 'YEARLY') {
+        await tx.leaveLedgerEntry.create({
+          data: {
+            tenantId: user.tenantId,
+            employeeId: req.employeeId,
+            leaveTypeId: req.leaveTypeId,
+            year: req.startDate.getUTCFullYear(),
+            type: 'DEDUCT',
+            days: -req.days,
+            requestId: req.id,
+            reason: `Leave request approved: ${req.leaveType.name}`,
+            createdById: user.userId,
+          },
+        });
+      }
+
+      // Notifications
+      if (step === 'MANAGER') {
+        if (dto.decision === 'APPROVED') {
+          // Notify employee
+          await this.notificationsService.notify(tx, {
+            tenantId: user.tenantId,
+            recipientUserIds: [req.employee.userId],
+            message: 'Your leave request has been approved by your manager and forwarded to HR.',
+            link: `/leave/${req.id}`,
+          });
+
+          // Notify HR users
+          const hrUsers = await tx.user.findMany({
+            where: {
+              tenantId: user.tenantId,
+              roles: { has: 'HR' },
+              active: true,
+            },
+            select: { id: true },
+          });
+          const hrUserIds = hrUsers.map((u) => u.id);
+          await this.notificationsService.notify(tx, {
+            tenantId: user.tenantId,
+            recipientUserIds: hrUserIds,
+            message: `New leave request from ${req.employee.firstName} ${req.employee.lastName} awaiting HR approval.`,
+            link: `/approvals?id=${req.id}`,
+          });
+        } else {
+          // Manager rejected
+          await this.notificationsService.notify(tx, {
+            tenantId: user.tenantId,
+            recipientUserIds: [req.employee.userId],
+            message: `Your leave request was rejected by your manager: ${dto.comment}`,
+            link: `/leave/${req.id}`,
+          });
+        }
+      } else if (step === 'HR') {
+        if (dto.decision === 'APPROVED') {
+          await this.notificationsService.notify(tx, {
+            tenantId: user.tenantId,
+            recipientUserIds: [req.employee.userId],
+            message: 'Your leave request has been approved by HR.',
+            link: `/leave/${req.id}`,
+          });
+        } else {
+          await this.notificationsService.notify(tx, {
+            tenantId: user.tenantId,
+            recipientUserIds: [req.employee.userId],
+            message: `Your leave request was rejected by HR: ${dto.comment}`,
+            link: `/leave/${req.id}`,
+          });
+        }
+      }
+
+      // Audit log
+      await this.auditService.record(tx, {
+        tenantId: user.tenantId,
+        actorId: user.userId,
+        action: 'decide',
+        entity: 'LeaveRequest',
+        entityId: req.id,
+        before: { status: req.status },
+        after: {
+          status: nextStatus,
+          decision: dto.decision,
+          comment: dto.comment?.trim() || null,
+        },
+      });
+
+      return tx.leaveRequest.findUniqueOrThrow({
+        where: { id: req.id },
+        include: {
+          leaveType: true,
+          employee: true,
+          approvals: {
+            orderBy: { decidedAt: 'asc' },
+            include: { approver: true },
+          },
+        },
+      });
     });
   }
 }

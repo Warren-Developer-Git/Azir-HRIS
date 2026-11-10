@@ -4,11 +4,12 @@ import { HealthController } from './health.controller.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { LeaveModule } from './leave/leave.module.js';
+import { NotificationsModule } from './notifications/notifications.module.js';
 import { JwtAuthGuard } from './auth/jwt-auth.guard.js';
 import { PermissionsGuard } from './auth/permissions.guard.js';
 
 @Module({
-  imports: [PrismaModule, AuthModule, LeaveModule],
+  imports: [PrismaModule, AuthModule, LeaveModule, NotificationsModule],
   controllers: [HealthController],
   providers: [
     {

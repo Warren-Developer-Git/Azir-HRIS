@@ -16,6 +16,7 @@ import { CurrentUser, RequirePermission } from '../auth/decorators.js';
 import type { AuthUser } from '../auth/permissions.js';
 import { CreateLeaveRequestDto } from './dto/create-leave-request.dto.js';
 import { UpdateLeaveRequestDto } from './dto/update-leave-request.dto.js';
+import { DecideLeaveRequestDto } from './dto/decide-leave-request.dto.js';
 
 @Controller('leave')
 export class LeaveRequestsController {
@@ -79,5 +80,16 @@ export class LeaveRequestsController {
     @Param('id') id: string,
   ) {
     return this.leaveRequestsService.cancelRequest(user, id);
+  }
+
+  @RequirePermission('leave.approve.manager', 'leave.approve.hr')
+  @Post('requests/:id/decision')
+  @HttpCode(HttpStatus.OK)
+  async decideRequest(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: DecideLeaveRequestDto,
+  ) {
+    return this.leaveRequestsService.decideRequest(user, id, dto);
   }
 }
