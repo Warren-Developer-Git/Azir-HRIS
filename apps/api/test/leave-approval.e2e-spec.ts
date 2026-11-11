@@ -164,7 +164,7 @@ describe('Leave Approval Flow (e2e)', () => {
   });
 
   it('rejects self-approval for HR: hr cannot approve their own request', async () => {
-    // HR files leave -> goes to depthead (manager) -> then PENDING_HR
+    // HR files leave -> goes to depthead (manager) -> awaiting 1 approval from manager or hr2
     const fileRes = await request(app.getHttpServer())
       .post('/leave/requests')
       .set('Authorization', `Bearer ${hrToken}`)
@@ -176,12 +176,6 @@ describe('Leave Approval Flow (e2e)', () => {
       });
     const reqId = fileRes.body.id;
 
-    // Depthead (manager of HR) approves
-    await request(app.getHttpServer())
-      .post(`/leave/requests/${reqId}/decision`)
-      .set('Authorization', `Bearer ${otherManagerToken}`)
-      .send({ decision: 'APPROVED' });
-
     // HR tries to approve own request -> 403
     const selfApproveRes = await request(app.getHttpServer())
       .post(`/leave/requests/${reqId}/decision`)
@@ -191,7 +185,7 @@ describe('Leave Approval Flow (e2e)', () => {
     expect(selfApproveRes.status).toBe(403);
     expect(selfApproveRes.body.message).toBe('You cannot approve your own request');
 
-    // hr2 approves -> 200 APPROVED
+    // hr2 approves in 1 step -> 200 APPROVED
     const secondHrRes = await request(app.getHttpServer())
       .post(`/leave/requests/${reqId}/decision`)
       .set('Authorization', `Bearer ${hr2Token}`)
@@ -199,6 +193,102 @@ describe('Leave Approval Flow (e2e)', () => {
 
     expect(secondHrRes.status).toBe(200);
     expect(secondHrRes.body.status).toBe('APPROVED');
+
+    // Subsequent approval by manager returns 409 because already decided
+    const alreadyDecidedRes = await request(app.getHttpServer())
+      .post(`/leave/requests/${reqId}/decision`)
+      .set('Authorization', `Bearer ${otherManagerToken}`)
+      .send({ decision: 'APPROVED' });
+    expect(alreadyDecidedRes.status).toBe(409);
+  });
+
+  it('1-step approval for Manager filer: manager files leave -> HR approves directly to APPROVED', async () => {
+    const fileRes = await request(app.getHttpServer())
+      .post('/leave/requests')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({
+        leaveTypeId: vlTypeId,
+        startDate: '2026-12-08',
+        endDate: '2026-12-09',
+        reason: 'Manager personal time',
+      });
+    expect(fileRes.status).toBe(201);
+    const reqId = fileRes.body.id;
+
+    // HR sees manager request in scope=awaiting
+    const awaitingRes = await request(app.getHttpServer())
+      .get('/leave/requests?scope=awaiting')
+      .set('Authorization', `Bearer ${hrToken}`);
+    expect(awaitingRes.status).toBe(200);
+    const found = awaitingRes.body.find((r: any) => r.id === reqId);
+    expect(found).toBeDefined();
+
+    // HR approves directly in 1 step
+    const hrRes = await request(app.getHttpServer())
+      .post(`/leave/requests/${reqId}/decision`)
+      .set('Authorization', `Bearer ${hrToken}`)
+      .send({ decision: 'APPROVED', comment: 'Approved for manager' });
+
+    expect(hrRes.status).toBe(200);
+    expect(hrRes.body.status).toBe('APPROVED');
+    expect(hrRes.body.approvals.length).toBe(1);
+    expect(hrRes.body.approvals[0].step).toBe('HR');
+  });
+
+  it('1-step approval for Manager filer: manager files leave -> direct manager approves directly to APPROVED', async () => {
+    const fileRes = await request(app.getHttpServer())
+      .post('/leave/requests')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({
+        leaveTypeId: vlTypeId,
+        startDate: '2026-12-10',
+        endDate: '2026-12-11',
+        reason: 'Manager conference',
+      });
+    expect(fileRes.status).toBe(201);
+    const reqId = fileRes.body.id;
+
+    // Depthead approves directly in 1 step
+    const mgrRes = await request(app.getHttpServer())
+      .post(`/leave/requests/${reqId}/decision`)
+      .set('Authorization', `Bearer ${otherManagerToken}`)
+      .send({ decision: 'APPROVED', comment: 'Approved by dept head' });
+
+    expect(mgrRes.status).toBe(200);
+    expect(mgrRes.body.status).toBe('APPROVED');
+    expect(mgrRes.body.approvals.length).toBe(1);
+    expect(mgrRes.body.approvals[0].step).toBe('MANAGER');
+  });
+
+  it('employee requires 2 steps: HR cannot approve while still in PENDING_MANAGER', async () => {
+    const fileRes = await request(app.getHttpServer())
+      .post('/leave/requests')
+      .set('Authorization', `Bearer ${employeeToken}`)
+      .send({
+        leaveTypeId: vlTypeId,
+        startDate: '2026-12-28',
+        endDate: '2026-12-29',
+        reason: 'Employee holiday',
+      });
+    expect(fileRes.status).toBe(201);
+    const reqId = fileRes.body.id;
+    expect(fileRes.body.status).toBe('PENDING_MANAGER');
+
+    // HR tries to approve regular employee before manager -> 404 (must be approved by manager first)
+    const hrEarlyRes = await request(app.getHttpServer())
+      .post(`/leave/requests/${reqId}/decision`)
+      .set('Authorization', `Bearer ${hrToken}`)
+      .send({ decision: 'APPROVED' });
+    expect(hrEarlyRes.status).toBe(404);
+
+    // HR can view it under scope=all_pending for organization visibility
+    const allPendingRes = await request(app.getHttpServer())
+      .get('/leave/requests?scope=all_pending')
+      .set('Authorization', `Bearer ${hrToken}`);
+    expect(allPendingRes.status).toBe(200);
+    const foundPending = allPendingRes.body.find((r: any) => r.id === reqId);
+    expect(foundPending).toBeDefined();
+    expect(foundPending.status).toBe('PENDING_MANAGER');
   });
 
   it('requires comment when rejecting (400 if missing, 200 with comment)', async () => {

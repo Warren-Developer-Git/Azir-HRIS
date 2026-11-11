@@ -61,7 +61,7 @@ export class LeaveRequestsController {
   @Get('requests')
   async listRequests(
     @CurrentUser() user: AuthUser,
-    @Query('scope') scope?: 'mine' | 'awaiting' | 'all',
+    @Query('scope') scope?: 'mine' | 'awaiting' | 'all' | 'all_pending',
     @Query('status') status?: string,
   ) {
     return this.leaveRequestsService.listRequests(user, scope, status);

@@ -14,6 +14,9 @@ import {
   AlertCircle,
   ArrowRight,
   Filter,
+  ShieldCheck,
+  UserCheck,
+  Users,
 } from 'lucide-react';
 
 interface Approver {
@@ -52,6 +55,9 @@ interface AwaitingLeaveRequest {
     employeeNo: string;
     position: string;
     department?: { name: string };
+    managerId?: string | null;
+    manager?: { id: string; firstName: string; lastName: string } | null;
+    user?: { roles: string[] };
   };
   approvals: ApprovalRecord[];
 }
@@ -59,6 +65,7 @@ interface AwaitingLeaveRequest {
 export default function ApprovalsPage() {
   const { user, can } = useAuth();
   const [requests, setRequests] = useState<AwaitingLeaveRequest[]>([]);
+  const [activeTab, setActiveTab] = useState<'awaiting' | 'all_pending'>('awaiting');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,11 +76,14 @@ export default function ApprovalsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [decisionError, setDecisionError] = useState<string | null>(null);
 
-  const fetchAwaiting = async () => {
+  const isHrOrAdmin = can('leave.approve.hr');
+  const isManager = can('leave.approve.manager');
+
+  const fetchRequests = async (scope: 'awaiting' | 'all_pending') => {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await api<AwaitingLeaveRequest[]>('/leave/requests?scope=awaiting');
+      const data = await api<AwaitingLeaveRequest[]>(`/leave/requests?scope=${scope}`);
       setRequests(data);
     } catch (err: any) {
       setError(err instanceof ApiError ? err.message : 'Failed to fetch pending approvals');
@@ -83,8 +93,8 @@ export default function ApprovalsPage() {
   };
 
   useEffect(() => {
-    fetchAwaiting();
-  }, []);
+    fetchRequests(activeTab);
+  }, [activeTab]);
 
   const handleDecisionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,7 +120,7 @@ export default function ApprovalsPage() {
       setDecisionModal(null);
       setActiveItem(null);
       setComment('');
-      await fetchAwaiting();
+      await fetchRequests(activeTab);
     } catch (err: any) {
       setDecisionError(err instanceof ApiError ? err.message : 'Failed to record decision');
     } finally {
@@ -133,17 +143,43 @@ export default function ApprovalsPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-neutral-200 dark:border-neutral-800">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight">Pending Approvals</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Leave Approvals</h1>
             {!isLoading && (
               <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-neutral-900 text-white dark:bg-white dark:text-neutral-900">
-                {requests.length} awaiting
+                {requests.length} {activeTab === 'awaiting' ? 'actionable' : 'pending'}
               </span>
             )}
           </div>
           <p className="text-sm text-neutral-500 mt-1">
-            Review and take action on employee leave requests requiring your authorization.
+            Review and authorize leave requests. Employee requests require 2-step verification (Manager → HR), while Manager/HR requests need only 1 approval.
           </p>
         </div>
+
+        {/* Tab Filters */}
+        {(isHrOrAdmin || isManager) && (
+          <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 p-1 rounded-lg border border-neutral-200 dark:border-neutral-700 self-start md:self-auto">
+            <button
+              onClick={() => setActiveTab('awaiting')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                activeTab === 'awaiting'
+                  ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white shadow-sm'
+                  : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+              }`}
+            >
+              Awaiting My Action
+            </button>
+            <button
+              onClick={() => setActiveTab('all_pending')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                activeTab === 'all_pending'
+                  ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white shadow-sm'
+                  : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+              }`}
+            >
+              All Organization Pending
+            </button>
+          </div>
+        )}
       </div>
 
       {error && (
@@ -165,7 +201,7 @@ export default function ApprovalsPage() {
         {isLoading ? (
           <div className="p-12 flex flex-col items-center justify-center text-neutral-500">
             <Loader2 className="w-6 h-6 animate-spin mb-3" />
-            <p className="text-sm">Checking for pending requests...</p>
+            <p className="text-sm">Loading pending leave requests...</p>
           </div>
         ) : requests.length === 0 ? (
           <div className="p-12 text-center text-neutral-500">
@@ -174,7 +210,9 @@ export default function ApprovalsPage() {
               All Caught Up!
             </h3>
             <p className="text-xs text-neutral-400 mt-1 max-w-sm mx-auto">
-              There are currently no leave requests awaiting your review or decision.
+              {activeTab === 'awaiting'
+                ? 'There are currently no leave requests awaiting your review or decision.'
+                : 'There are no active pending requests in the organization.'}
             </p>
           </div>
         ) : (
@@ -186,89 +224,165 @@ export default function ApprovalsPage() {
                   <th className="px-5 py-3">Type</th>
                   <th className="px-5 py-3">Dates</th>
                   <th className="px-5 py-3">Days</th>
-                  <th className="px-5 py-3">Current Step</th>
+                  <th className="px-5 py-3">Approval Workflow</th>
                   <th className="px-5 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
-                {requests.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
-                  >
-                    <td className="px-5 py-4 whitespace-nowrap">
-                      <div className="font-semibold text-neutral-900 dark:text-neutral-100">
-                        {item.employee.firstName} {item.employee.lastName}
-                      </div>
-                      <div className="text-xs text-neutral-500 flex items-center gap-1.5 mt-0.5">
-                        <span>{item.employee.position}</span>
-                        <span>•</span>
-                        <span>{item.employee.employeeNo}</span>
-                      </div>
-                    </td>
+                {requests.map((item) => {
+                  const filerRoles = item.employee.user?.roles || [];
+                  const isFilerMgmt = filerRoles.some((r) =>
+                    ['MANAGER', 'HR', 'ADMIN'].includes(r),
+                  );
 
-                    <td className="px-5 py-4 whitespace-nowrap">
-                      <div className="font-medium text-neutral-900 dark:text-neutral-100">
-                        {item.leaveType.name}
-                      </div>
-                      <div className="text-xs font-mono text-neutral-500">
-                        {item.leaveType.code}
-                      </div>
-                    </td>
+                  // Current user capability check
+                  const isDirectManager =
+                    can('leave.approve.manager') &&
+                    item.employee.managerId === user?.employeeId &&
+                    item.employeeId !== user?.employeeId;
 
-                    <td className="px-5 py-4 whitespace-nowrap text-neutral-600 dark:text-neutral-400">
-                      <div>
-                        {formatDate(item.startDate)}
-                        {item.startDate !== item.endDate && ` – ${formatDate(item.endDate)}`}
-                      </div>
-                      <div className="text-xs text-neutral-400 italic truncate max-w-xs mt-0.5">
-                        "{item.reason}"
-                      </div>
-                    </td>
+                  const isHr =
+                    can('leave.approve.hr') && item.employeeId !== user?.employeeId;
 
-                    <td className="px-5 py-4 whitespace-nowrap font-medium text-neutral-900 dark:text-neutral-100">
-                      {item.days} {item.days === 1 ? 'day' : 'days'}
-                    </td>
+                  // Management filers: direct manager or HR can decide
+                  // Regular employee: direct manager can decide at PENDING_MANAGER, HR at PENDING_HR
+                  const canUserDecide =
+                    (item.status === 'PENDING_MANAGER' || item.status === 'PENDING_HR') &&
+                    (isFilerMgmt
+                      ? isDirectManager || isHr
+                      : (item.status === 'PENDING_MANAGER' && isDirectManager) ||
+                        (item.status === 'PENDING_HR' && isHr));
 
-                    <td className="px-5 py-4 whitespace-nowrap">
-                      <StatusBadge status={item.status} />
-                    </td>
+                  return (
+                    <tr
+                      key={item.id}
+                      className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
+                    >
+                      <td className="px-5 py-4 whitespace-nowrap">
+                        <div className="font-semibold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                          <span>
+                            {item.employee.firstName} {item.employee.lastName}
+                          </span>
+                          {isFilerMgmt && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
+                              {filerRoles.find((r) => ['ADMIN', 'HR', 'MANAGER'].includes(r)) || 'MGMT'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-neutral-500 flex items-center gap-1.5 mt-0.5">
+                          <span>{item.employee.position}</span>
+                          <span>•</span>
+                          <span>{item.employee.employeeNo}</span>
+                          {item.employee.department && (
+                            <>
+                              <span>•</span>
+                              <span>{item.employee.department.name}</span>
+                            </>
+                          )}
+                        </div>
+                      </td>
 
-                    <td className="px-5 py-4 whitespace-nowrap text-right">
-                      <div className="inline-flex items-center gap-2">
-                        <button
-                          onClick={() => {
-                            setActiveItem(item);
-                            setDecisionModal('REJECTED');
-                            setComment('');
-                            setDecisionError(null);
-                          }}
-                          className="px-2.5 py-1 text-xs font-medium rounded border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-                        >
-                          Reject
-                        </button>
-                        <button
-                          onClick={() => {
-                            setActiveItem(item);
-                            setDecisionModal('APPROVED');
-                            setComment('');
-                            setDecisionError(null);
-                          }}
-                          className="px-2.5 py-1 text-xs font-semibold rounded bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors"
-                        >
-                          Approve
-                        </button>
-                        <Link
-                          href={`/leave/${item.id}`}
-                          className="p-1 text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100"
-                          title="View Full Details"
-                        >
-                          <ArrowRight className="w-4 h-4" />
-                        </Link>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      <td className="px-5 py-4 whitespace-nowrap">
+                        <div className="font-medium text-neutral-900 dark:text-neutral-100">
+                          {item.leaveType.name}
+                        </div>
+                        <div className="text-xs font-mono text-neutral-500">
+                          {item.leaveType.code}
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-4 whitespace-nowrap text-neutral-600 dark:text-neutral-400">
+                        <div>
+                          {formatDate(item.startDate)}
+                          {item.startDate !== item.endDate && ` – ${formatDate(item.endDate)}`}
+                        </div>
+                        <div className="text-xs text-neutral-400 italic truncate max-w-xs mt-0.5">
+                          "{item.reason}"
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-4 whitespace-nowrap font-medium text-neutral-900 dark:text-neutral-100">
+                        {item.days} {item.days === 1 ? 'day' : 'days'}
+                      </td>
+
+                      <td className="px-5 py-4 whitespace-nowrap">
+                        {isFilerMgmt ? (
+                          <div>
+                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                              <ShieldCheck className="w-3 h-3" />
+                              1-Step: Manager or HR
+                            </div>
+                            <div className="text-[11px] text-neutral-500 mt-1">
+                              Either Manager or HR can approve
+                            </div>
+                          </div>
+                        ) : item.status === 'PENDING_MANAGER' ? (
+                          <div>
+                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                              <Clock className="w-3 h-3" />
+                              Step 1 of 2: Manager Review
+                            </div>
+                            <div className="text-[11px] text-neutral-500 mt-1">
+                              Manager: {item.employee.manager ? `${item.employee.manager.firstName} ${item.employee.manager.lastName}` : 'Unassigned'}
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                              <UserCheck className="w-3 h-3" />
+                              Step 2 of 2: HR Policy
+                            </div>
+                            <div className="text-[11px] text-neutral-500 mt-1">
+                              Manager approved • Awaiting HR
+                            </div>
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="px-5 py-4 whitespace-nowrap text-right">
+                        <div className="inline-flex items-center gap-2">
+                          {canUserDecide ? (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setActiveItem(item);
+                                  setDecisionModal('REJECTED');
+                                  setComment('');
+                                  setDecisionError(null);
+                                }}
+                                className="px-2.5 py-1 text-xs font-medium rounded border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                              >
+                                Reject
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setActiveItem(item);
+                                  setDecisionModal('APPROVED');
+                                  setComment('');
+                                  setDecisionError(null);
+                                }}
+                                className="px-2.5 py-1 text-xs font-semibold rounded bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors"
+                              >
+                                Approve
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-xs text-neutral-400 italic">
+                              {item.status === 'PENDING_MANAGER' ? 'Awaiting Manager' : 'Awaiting HR'}
+                            </span>
+                          )}
+                          <Link
+                            href={`/leave/${item.id}`}
+                            className="p-1 text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100"
+                            title="View Full Details"
+                          >
+                            <ArrowRight className="w-4 h-4" />
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

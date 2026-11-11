@@ -5,6 +5,7 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
+import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { BalancesService } from './balances.service.js';
@@ -20,6 +21,10 @@ import { CreateLeaveRequestDto } from './dto/create-leave-request.dto.js';
 import { UpdateLeaveRequestDto } from './dto/update-leave-request.dto.js';
 import { DecideLeaveRequestDto } from './dto/decide-leave-request.dto.js';
 import { AuthUser, hasPermission } from '../auth/permissions.js';
+
+export function isAdministrativeFiler(roles: Role[] = []): boolean {
+  return roles.some((r) => r === 'MANAGER' || r === 'HR' || r === 'ADMIN');
+}
 
 @Injectable()
 export class LeaveRequestsService {
@@ -185,13 +190,37 @@ export class LeaveRequestsService {
         });
       }
 
+      // If filer is Manager or HR, either their manager or HR can approve (1-step approval),
+      // so notify HR team members as well (excluding the filer if filer is HR).
+      const isFilerAdminOrMgmt = isAdministrativeFiler(user.roles);
+      if (isFilerAdminOrMgmt) {
+        const hrUsers = await tx.user.findMany({
+          where: {
+            tenantId: user.tenantId,
+            roles: { has: 'HR' },
+            active: true,
+            id: { not: user.userId },
+          },
+          select: { id: true },
+        });
+        const hrUserIds = hrUsers.map((u) => u.id);
+        if (hrUserIds.length > 0) {
+          await this.notificationsService.notify(tx, {
+            tenantId: user.tenantId,
+            recipientUserIds: hrUserIds,
+            message: `${employee.firstName} ${employee.lastName} requested ${days} day(s) of ${leaveType.name} (Manager/HR 1-step approval).`,
+            link: `/approvals?id=${created.id}`,
+          });
+        }
+      }
+
       return created;
     });
   }
 
   async listRequests(
     user: AuthUser,
-    scope: 'mine' | 'awaiting' | 'all' = 'mine',
+    scope: 'mine' | 'awaiting' | 'all' | 'all_pending' = 'mine',
     status?: string,
   ) {
     return this.prisma.withTenant(user.tenantId, async (tx) => {
@@ -204,23 +233,59 @@ export class LeaveRequestsService {
         where.employeeId = user.employeeId;
       } else if (scope === 'awaiting') {
         const isHr = hasPermission(user, 'leave.approve.hr');
-        const conditions: any[] = [
-          // Manager awaiting
-          {
+        const isManager = hasPermission(user, 'leave.approve.manager');
+        const conditions: any[] = [];
+
+        // Manager awaiting: direct reports with PENDING_MANAGER (excluding own requests)
+        if (isManager) {
+          conditions.push({
             status: 'PENDING_MANAGER',
             employee: { managerId: user.employeeId },
-          },
-        ];
+            employeeId: { not: user.employeeId },
+          });
+        }
 
-        // HR awaiting (requests in PENDING_HR not filed by caller)
+        // HR awaiting:
+        // 1. All requests in PENDING_HR (excluding own requests)
+        // 2. Requests in PENDING_MANAGER filed by Manager/HR/Admin (excluding own requests),
+        //    because for Manager/HR filers, at least 1 (Manager OR HR) can approve!
         if (isHr) {
           conditions.push({
             status: 'PENDING_HR',
             employeeId: { not: user.employeeId },
           });
+
+          conditions.push({
+            status: 'PENDING_MANAGER',
+            employeeId: { not: user.employeeId },
+            employee: {
+              user: {
+                roles: {
+                  hasSome: ['MANAGER', 'HR', 'ADMIN'],
+                },
+              },
+            },
+          });
         }
 
-        where.OR = conditions;
+        where.OR =
+          conditions.length > 0
+            ? conditions
+            : [{ id: '00000000-0000-0000-0000-000000000000' }];
+      } else if (scope === 'all_pending') {
+        const isHr = hasPermission(user, 'leave.approve.hr');
+        const isManager = hasPermission(user, 'leave.approve.manager');
+
+        if (!isHr && !isManager) {
+          throw new ForbiddenException('Manager or HR permissions required');
+        }
+
+        where.status = { in: ['PENDING_MANAGER', 'PENDING_HR'] };
+
+        if (!isHr && isManager) {
+          // Managers see all pending requests for their direct reports
+          where.employee = { managerId: user.employeeId };
+        }
       } else if (scope === 'all') {
         if (!hasPermission(user, 'leave.approve.hr')) {
           throw new BadRequestException('Requires HR approval permissions');
@@ -237,7 +302,20 @@ export class LeaveRequestsService {
               lastName: true,
               employeeNo: true,
               position: true,
+              managerId: true,
+              manager: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                },
+              },
               department: { select: { id: true, name: true } },
+              user: {
+                select: {
+                  roles: true,
+                },
+              },
             },
           },
           leaveType: true,
@@ -261,6 +339,11 @@ export class LeaveRequestsService {
             include: {
               manager: true,
               department: true,
+              user: {
+                select: {
+                  roles: true,
+                },
+              },
             },
           },
           leaveType: true,
@@ -477,33 +560,58 @@ export class LeaveRequestsService {
         throw new NotFoundException('Leave request not found');
       }
 
+      if (!['PENDING_MANAGER', 'PENDING_HR'].includes(req.status)) {
+        throw new ConflictException('This request was already decided');
+      }
+
+      if (req.employeeId === user.employeeId) {
+        throw new ForbiddenException('You cannot approve your own request');
+      }
+
+      const filerRoles = req.employee.user?.roles || [];
+      const isFilerMgmt = isAdministrativeFiler(filerRoles);
+
       let step: 'MANAGER' | 'HR';
       let nextStatus: 'PENDING_HR' | 'APPROVED' | 'REJECTED';
 
-      if (req.status === 'PENDING_MANAGER') {
-        const canApproveAsManager =
+      if (isFilerMgmt) {
+        // CASE: Filer is Manager, HR, or Admin -> 1-step approval!
+        // At least 1 of them (direct manager OR HR) can approve
+        const isDirectManager =
           hasPermission(user, 'leave.approve.manager') &&
           req.employee.managerId === user.employeeId;
 
-        if (!canApproveAsManager) {
+        const isHr = hasPermission(user, 'leave.approve.hr');
+
+        if (!isDirectManager && !isHr) {
           throw new NotFoundException('Leave request not found');
         }
 
-        step = 'MANAGER';
-        nextStatus = dto.decision === 'APPROVED' ? 'PENDING_HR' : 'REJECTED';
-      } else if (req.status === 'PENDING_HR') {
-        if (!hasPermission(user, 'leave.approve.hr')) {
-          throw new NotFoundException('Leave request not found');
-        }
-
-        if (req.employeeId === user.employeeId) {
-          throw new ForbiddenException('You cannot approve your own request');
-        }
-
-        step = 'HR';
+        step = isDirectManager ? 'MANAGER' : 'HR';
         nextStatus = dto.decision === 'APPROVED' ? 'APPROVED' : 'REJECTED';
       } else {
-        throw new ConflictException('This request was already decided');
+        // CASE: Filer is regular Employee -> strictly 2-step approval!
+        if (req.status === 'PENDING_MANAGER') {
+          const canApproveAsManager =
+            hasPermission(user, 'leave.approve.manager') &&
+            req.employee.managerId === user.employeeId;
+
+          if (!canApproveAsManager) {
+            throw new NotFoundException('Leave request not found');
+          }
+
+          step = 'MANAGER';
+          nextStatus = dto.decision === 'APPROVED' ? 'PENDING_HR' : 'REJECTED';
+        } else if (req.status === 'PENDING_HR') {
+          if (!hasPermission(user, 'leave.approve.hr')) {
+            throw new NotFoundException('Leave request not found');
+          }
+
+          step = 'HR';
+          nextStatus = dto.decision === 'APPROVED' ? 'APPROVED' : 'REJECTED';
+        } else {
+          throw new ConflictException('This request was already decided');
+        }
       }
 
       // Optimistic concurrency control / row state match
@@ -533,7 +641,7 @@ export class LeaveRequestsService {
         },
       });
 
-      // If HR approved and YEARLY kind, deduct from ledger
+      // If approved and YEARLY kind, deduct from ledger
       if (nextStatus === 'APPROVED' && req.leaveType.kind === 'YEARLY') {
         await tx.leaveLedgerEntry.create({
           data: {
@@ -551,54 +659,48 @@ export class LeaveRequestsService {
       }
 
       // Notifications
-      if (step === 'MANAGER') {
-        if (dto.decision === 'APPROVED') {
-          // Notify employee
+      if (nextStatus === 'APPROVED') {
+        if (req.employee.userId) {
+          await this.notificationsService.notify(tx, {
+            tenantId: user.tenantId,
+            recipientUserIds: [req.employee.userId],
+            message: `Your leave request for ${req.leaveType.name} has been approved by ${step === 'MANAGER' ? 'your manager' : 'HR'}.`,
+            link: `/leave/${req.id}`,
+          });
+        }
+      } else if (nextStatus === 'PENDING_HR') {
+        if (req.employee.userId) {
           await this.notificationsService.notify(tx, {
             tenantId: user.tenantId,
             recipientUserIds: [req.employee.userId],
             message: 'Your leave request has been approved by your manager and forwarded to HR.',
             link: `/leave/${req.id}`,
           });
+        }
 
-          // Notify HR users
-          const hrUsers = await tx.user.findMany({
-            where: {
-              tenantId: user.tenantId,
-              roles: { has: 'HR' },
-              active: true,
-            },
-            select: { id: true },
-          });
-          const hrUserIds = hrUsers.map((u) => u.id);
+        const hrUsers = await tx.user.findMany({
+          where: {
+            tenantId: user.tenantId,
+            roles: { has: 'HR' },
+            active: true,
+          },
+          select: { id: true },
+        });
+        const hrUserIds = hrUsers.map((u) => u.id);
+        if (hrUserIds.length > 0) {
           await this.notificationsService.notify(tx, {
             tenantId: user.tenantId,
             recipientUserIds: hrUserIds,
             message: `New leave request from ${req.employee.firstName} ${req.employee.lastName} awaiting HR approval.`,
             link: `/approvals?id=${req.id}`,
           });
-        } else {
-          // Manager rejected
-          await this.notificationsService.notify(tx, {
-            tenantId: user.tenantId,
-            recipientUserIds: [req.employee.userId],
-            message: `Your leave request was rejected by your manager: ${dto.comment}`,
-            link: `/leave/${req.id}`,
-          });
         }
-      } else if (step === 'HR') {
-        if (dto.decision === 'APPROVED') {
+      } else if (nextStatus === 'REJECTED') {
+        if (req.employee.userId) {
           await this.notificationsService.notify(tx, {
             tenantId: user.tenantId,
             recipientUserIds: [req.employee.userId],
-            message: 'Your leave request has been approved by HR.',
-            link: `/leave/${req.id}`,
-          });
-        } else {
-          await this.notificationsService.notify(tx, {
-            tenantId: user.tenantId,
-            recipientUserIds: [req.employee.userId],
-            message: `Your leave request was rejected by HR: ${dto.comment}`,
+            message: `Your leave request was rejected by ${step === 'MANAGER' ? 'your manager' : 'HR'}: ${dto.comment}`,
             link: `/leave/${req.id}`,
           });
         }

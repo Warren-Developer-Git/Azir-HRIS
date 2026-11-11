@@ -55,6 +55,8 @@ interface LeaveRequestDetail {
     position: string;
     department?: { name: string };
     managerId?: string | null;
+    manager?: { id: string; firstName: string; lastName: string } | null;
+    user?: { roles: string[] };
   };
   approvals: ApprovalRecord[];
 }
@@ -223,18 +225,27 @@ export default function LeaveDetailPage() {
   const canEdit = isRequester && request.status === 'PENDING_MANAGER';
   const canCancel = isRequester && ['PENDING_MANAGER', 'PENDING_HR'].includes(request.status);
 
+  const filerRoles = request.employee.user?.roles || [];
+  const isFilerMgmt = filerRoles.some((r: string) => ['MANAGER', 'HR', 'ADMIN'].includes(r));
+
   // Decision capability check
-  const isManagerOfRequester =
+  const isDirectManager =
     can('leave.approve.manager') &&
-    request.status === 'PENDING_MANAGER' &&
-    request.employee.managerId === user?.employeeId;
+    request.employee.managerId === user?.employeeId &&
+    request.employeeId !== user?.employeeId;
 
   const isHrApprover =
     can('leave.approve.hr') &&
-    request.status === 'PENDING_HR' &&
     request.employeeId !== user?.employeeId;
 
-  const canDecide = isManagerOfRequester || isHrApprover;
+  // Management filers: 1-step approval where either manager OR HR can decide
+  // Regular employee filers: strictly 2-step (manager decides at PENDING_MANAGER, HR at PENDING_HR)
+  const canDecide =
+    (request.status === 'PENDING_MANAGER' || request.status === 'PENDING_HR') &&
+    (isFilerMgmt
+      ? isDirectManager || isHrApprover
+      : (request.status === 'PENDING_MANAGER' && isDirectManager) ||
+        (request.status === 'PENDING_HR' && isHrApprover));
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -285,10 +296,18 @@ export default function LeaveDetailPage() {
         <div className="p-4 rounded-lg border-2 border-neutral-900 dark:border-white bg-neutral-50 dark:bg-neutral-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="font-bold text-sm text-neutral-900 dark:text-neutral-100">
-              Action Required: {request.status === 'PENDING_MANAGER' ? 'Manager Approval' : 'HR Policy Approval'}
+              {isFilerMgmt
+                ? 'Action Required: Manager or HR Approval (1-Step Fast Track)'
+                : request.status === 'PENDING_MANAGER'
+                ? 'Action Required: Step 1 of 2 – Manager Review'
+                : 'Action Required: Step 2 of 2 – HR Policy Verification'}
             </div>
             <p className="text-xs text-neutral-500 mt-0.5">
-              Please review this leave application and approve or reject it.
+              {isFilerMgmt
+                ? 'As a Manager or HR team member request, either direct manager or HR can authorize this request directly.'
+                : request.status === 'PENDING_MANAGER'
+                ? 'Please review operational team coverage and endorse this request.'
+                : 'Please verify company leave policy and quota balance to finalize approval.'}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -474,115 +493,175 @@ export default function LeaveDetailPage() {
             </div>
           </div>
 
-          {/* Step 2: Manager Approval */}
-          {(() => {
-            const managerApproval = request.approvals.find((a) => a.step === 'MANAGER');
-            const isManagerPending = request.status === 'PENDING_MANAGER';
+          {isFilerMgmt ? (
+            /* 1-Step Approval Workflow for Manager / HR */
+            (() => {
+              const approval = request.approvals[0];
+              const isPending = request.status === 'PENDING_MANAGER' || request.status === 'PENDING_HR';
 
-            return (
-              <div className="relative flex items-start gap-4">
-                <span
-                  className={`absolute -left-6 top-1 w-5 h-5 rounded-full bg-white dark:bg-neutral-900 border-2 flex items-center justify-center ${
-                    managerApproval
-                      ? managerApproval.decision === 'APPROVED'
-                        ? 'border-neutral-900 dark:border-white'
-                        : 'border-neutral-400 dark:border-neutral-600'
-                      : isManagerPending
-                      ? 'border-neutral-400 animate-pulse'
-                      : 'border-neutral-300 dark:border-neutral-700'
-                  }`}
-                >
-                  {managerApproval && managerApproval.decision === 'APPROVED' ? (
-                    <CheckCircle className="w-3 h-3 text-neutral-900 dark:text-white" />
-                  ) : managerApproval && managerApproval.decision === 'REJECTED' ? (
-                    <XCircle className="w-3 h-3 text-neutral-600 dark:text-neutral-400" />
-                  ) : (
-                    <Clock className="w-2.5 h-2.5 text-neutral-400" />
-                  )}
-                </span>
-                <div>
-                  <div className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">
-                    Step 1: Manager Review
+              return (
+                <div className="relative flex items-start gap-4">
+                  <span
+                    className={`absolute -left-6 top-1 w-5 h-5 rounded-full bg-white dark:bg-neutral-900 border-2 flex items-center justify-center ${
+                      approval
+                        ? approval.decision === 'APPROVED'
+                          ? 'border-neutral-900 dark:border-white'
+                          : 'border-neutral-400 dark:border-neutral-600'
+                        : isPending
+                        ? 'border-neutral-400 animate-pulse'
+                        : 'border-neutral-300 dark:border-neutral-700'
+                    }`}
+                  >
+                    {approval && approval.decision === 'APPROVED' ? (
+                      <CheckCircle className="w-3 h-3 text-neutral-900 dark:text-white" />
+                    ) : approval && approval.decision === 'REJECTED' ? (
+                      <XCircle className="w-3 h-3 text-neutral-600 dark:text-neutral-400" />
+                    ) : (
+                      <Clock className="w-2.5 h-2.5 text-neutral-400" />
+                    )}
+                  </span>
+                  <div>
+                    <div className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">
+                      1-Step Authorization (Direct Manager or HR)
+                    </div>
+                    {approval ? (
+                      <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
+                        <span className="font-medium text-neutral-900 dark:text-neutral-100">
+                          {approval.decision === 'APPROVED' ? 'Approved' : 'Rejected'}
+                        </span>{' '}
+                        by {approval.approver.firstName} {approval.approver.lastName} ({approval.step}) on{' '}
+                        {formatDateTime(approval.decidedAt)}
+                        {approval.comment && (
+                          <div className="mt-1.5 p-2 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 italic">
+                            "{approval.comment}"
+                          </div>
+                        )}
+                      </div>
+                    ) : isPending ? (
+                      <div className="text-xs text-neutral-500 mt-0.5">
+                        Awaiting 1 authorization from either direct manager or HR...
+                      </div>
+                    ) : (
+                      <div className="text-xs text-neutral-400 mt-0.5">Cancelled</div>
+                    )}
                   </div>
-                  {managerApproval ? (
-                    <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
-                      <span className="font-medium text-neutral-900 dark:text-neutral-100">
-                        {managerApproval.decision === 'APPROVED' ? 'Approved' : 'Rejected'}
-                      </span>{' '}
-                      by {managerApproval.approver.firstName} {managerApproval.approver.lastName} on{' '}
-                      {formatDateTime(managerApproval.decidedAt)}
-                      {managerApproval.comment && (
-                        <div className="mt-1.5 p-2 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 italic">
-                          "{managerApproval.comment}"
+                </div>
+              );
+            })()
+          ) : (
+            /* 2-Step Approval Workflow for Regular Employee */
+            <>
+              {/* Step 1: Manager Approval */}
+              {(() => {
+                const managerApproval = request.approvals.find((a) => a.step === 'MANAGER');
+                const isManagerPending = request.status === 'PENDING_MANAGER';
+
+                return (
+                  <div className="relative flex items-start gap-4">
+                    <span
+                      className={`absolute -left-6 top-1 w-5 h-5 rounded-full bg-white dark:bg-neutral-900 border-2 flex items-center justify-center ${
+                        managerApproval
+                          ? managerApproval.decision === 'APPROVED'
+                            ? 'border-neutral-900 dark:border-white'
+                            : 'border-neutral-400 dark:border-neutral-600'
+                          : isManagerPending
+                          ? 'border-neutral-400 animate-pulse'
+                          : 'border-neutral-300 dark:border-neutral-700'
+                      }`}
+                    >
+                      {managerApproval && managerApproval.decision === 'APPROVED' ? (
+                        <CheckCircle className="w-3 h-3 text-neutral-900 dark:text-white" />
+                      ) : managerApproval && managerApproval.decision === 'REJECTED' ? (
+                        <XCircle className="w-3 h-3 text-neutral-600 dark:text-neutral-400" />
+                      ) : (
+                        <Clock className="w-2.5 h-2.5 text-neutral-400" />
+                      )}
+                    </span>
+                    <div>
+                      <div className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">
+                        Step 1 of 2: Manager Review
+                      </div>
+                      {managerApproval ? (
+                        <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
+                          <span className="font-medium text-neutral-900 dark:text-neutral-100">
+                            {managerApproval.decision === 'APPROVED' ? 'Approved' : 'Rejected'}
+                          </span>{' '}
+                          by {managerApproval.approver.firstName} {managerApproval.approver.lastName} on{' '}
+                          {formatDateTime(managerApproval.decidedAt)}
+                          {managerApproval.comment && (
+                            <div className="mt-1.5 p-2 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 italic">
+                              "{managerApproval.comment}"
+                            </div>
+                          )}
                         </div>
+                      ) : isManagerPending ? (
+                        <div className="text-xs text-neutral-500 mt-0.5">
+                          Awaiting manager operational verification...
+                        </div>
+                      ) : (
+                        <div className="text-xs text-neutral-400 mt-0.5">Skipped or not required</div>
                       )}
                     </div>
-                  ) : isManagerPending ? (
-                    <div className="text-xs text-neutral-500 mt-0.5">
-                      Awaiting manager operational verification...
-                    </div>
-                  ) : (
-                    <div className="text-xs text-neutral-400 mt-0.5">Skipped or not required</div>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Step 3: HR Policy Approval */}
-          {(() => {
-            const hrApproval = request.approvals.find((a) => a.step === 'HR');
-            const isHrPending = request.status === 'PENDING_HR';
-
-            return (
-              <div className="relative flex items-start gap-4">
-                <span
-                  className={`absolute -left-6 top-1 w-5 h-5 rounded-full bg-white dark:bg-neutral-900 border-2 flex items-center justify-center ${
-                    hrApproval
-                      ? hrApproval.decision === 'APPROVED'
-                        ? 'border-neutral-900 dark:border-white'
-                        : 'border-neutral-400 dark:border-neutral-600'
-                      : isHrPending
-                      ? 'border-neutral-400 animate-pulse'
-                      : 'border-neutral-300 dark:border-neutral-700'
-                  }`}
-                >
-                  {hrApproval && hrApproval.decision === 'APPROVED' ? (
-                    <CheckCircle className="w-3 h-3 text-neutral-900 dark:text-white" />
-                  ) : hrApproval && hrApproval.decision === 'REJECTED' ? (
-                    <XCircle className="w-3 h-3 text-neutral-600 dark:text-neutral-400" />
-                  ) : (
-                    <Clock className="w-2.5 h-2.5 text-neutral-400" />
-                  )}
-                </span>
-                <div>
-                  <div className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">
-                    Step 2: HR Policy & Quota Verification
                   </div>
-                  {hrApproval ? (
-                    <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
-                      <span className="font-medium text-neutral-900 dark:text-neutral-100">
-                        {hrApproval.decision === 'APPROVED' ? 'Approved' : 'Rejected'}
-                      </span>{' '}
-                      by {hrApproval.approver.firstName} {hrApproval.approver.lastName} on{' '}
-                      {formatDateTime(hrApproval.decidedAt)}
-                      {hrApproval.comment && (
-                        <div className="mt-1.5 p-2 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 italic">
-                          "{hrApproval.comment}"
+                );
+              })()}
+
+              {/* Step 2: HR Policy Approval */}
+              {(() => {
+                const hrApproval = request.approvals.find((a) => a.step === 'HR');
+                const isHrPending = request.status === 'PENDING_HR';
+
+                return (
+                  <div className="relative flex items-start gap-4">
+                    <span
+                      className={`absolute -left-6 top-1 w-5 h-5 rounded-full bg-white dark:bg-neutral-900 border-2 flex items-center justify-center ${
+                        hrApproval
+                          ? hrApproval.decision === 'APPROVED'
+                            ? 'border-neutral-900 dark:border-white'
+                            : 'border-neutral-400 dark:border-neutral-600'
+                          : isHrPending
+                          ? 'border-neutral-400 animate-pulse'
+                          : 'border-neutral-300 dark:border-neutral-700'
+                      }`}
+                    >
+                      {hrApproval && hrApproval.decision === 'APPROVED' ? (
+                        <CheckCircle className="w-3 h-3 text-neutral-900 dark:text-white" />
+                      ) : hrApproval && hrApproval.decision === 'REJECTED' ? (
+                        <XCircle className="w-3 h-3 text-neutral-600 dark:text-neutral-400" />
+                      ) : (
+                        <Clock className="w-2.5 h-2.5 text-neutral-400" />
+                      )}
+                    </span>
+                    <div>
+                      <div className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">
+                        Step 2 of 2: HR Policy & Quota Verification
+                      </div>
+                      {hrApproval ? (
+                        <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
+                          <span className="font-medium text-neutral-900 dark:text-neutral-100">
+                            {hrApproval.decision === 'APPROVED' ? 'Approved' : 'Rejected'}
+                          </span>{' '}
+                          by {hrApproval.approver.firstName} {hrApproval.approver.lastName} on{' '}
+                          {formatDateTime(hrApproval.decidedAt)}
+                          {hrApproval.comment && (
+                            <div className="mt-1.5 p-2 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 italic">
+                              "{hrApproval.comment}"
+                            </div>
+                          )}
                         </div>
+                      ) : isHrPending ? (
+                        <div className="text-xs text-neutral-500 mt-0.5">
+                          Awaiting HR final review and quota deduction...
+                        </div>
+                      ) : (
+                        <div className="text-xs text-neutral-400 mt-0.5">Pending earlier step completion</div>
                       )}
                     </div>
-                  ) : isHrPending ? (
-                    <div className="text-xs text-neutral-500 mt-0.5">
-                      Awaiting HR final review and quota deduction...
-                    </div>
-                  ) : (
-                    <div className="text-xs text-neutral-400 mt-0.5">Pending earlier step completion</div>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
+                  </div>
+                );
+              })()}
+            </>
+          )}
         </div>
       </div>
 
