@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../lib/auth-context';
 import { ThemeToggle } from './theme-toggle';
+import { NotificationBell } from './notification-bell';
 import {
   LayoutDashboard,
   CalendarDays,
@@ -83,6 +84,7 @@ export function AppSidebar() {
       <div className="md:hidden flex items-center justify-between p-4 border-b border-neutral-200 bg-white dark:bg-black dark:border-neutral-800">
         <div className="font-bold text-lg tracking-tight">HRMS</div>
         <div className="flex items-center gap-2">
+          <NotificationBell />
           <ThemeToggle />
           <button
             onClick={() => setIsOpen(!isOpen)}
@@ -111,13 +113,16 @@ export function AppSidebar() {
         <div>
           {/* Header */}
           <div className="p-6 border-b border-neutral-100 dark:border-neutral-900 flex items-center justify-between">
-            <div className="min-w-0">
+            <div className="min-w-0 pr-2">
               <div className="text-xl font-bold tracking-tight">HRMS</div>
               <div className="text-xs text-neutral-500 font-medium truncate mt-0.5">
                 {user?.tenantName || 'Human Resources'}
               </div>
             </div>
-            <ThemeToggle />
+            <div className="flex items-center gap-1.5 shrink-0">
+              <NotificationBell />
+              <ThemeToggle />
+            </div>
           </div>
 
           {/* Navigation links */}
