@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { CompanyLogo } from '@/components/company-logo';
+import { COMPANY_LOGO_DATA_URL, HR_SIGNATURE_DATA_URL } from '@/lib/document-assets';
 import QRCode from 'qrcode';
 import {
   FileText,
@@ -216,6 +217,11 @@ function DocumentsContent() {
       return;
     }
 
+    let html = printSheet.innerHTML;
+    // Embed self-contained base64 data URIs so print iframe has 100% reliable logo and signature
+    html = html.replace(/\/company-logo-mark\.svg/g, COMPANY_LOGO_DATA_URL);
+    html = html.replace(/\/signatures\/hr-signature-clean\.png/g, HR_SIGNATURE_DATA_URL);
+
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
     iframe.style.right = '0';
@@ -243,7 +249,7 @@ function DocumentsContent() {
           <style>
             @page {
               size: A4 portrait;
-              margin: 15mm 20mm;
+              margin: 12mm 15mm;
             }
             * {
               box-sizing: border-box;
@@ -256,6 +262,19 @@ function DocumentsContent() {
               background: #ffffff;
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
+            }
+            .company-logo-img {
+              height: 38px !important;
+              max-height: 38px !important;
+              width: auto !important;
+              display: inline-block !important;
+              vertical-align: middle !important;
+            }
+            .hr-sig-img {
+              height: 60px !important;
+              max-height: 60px !important;
+              width: auto !important;
+              display: block !important;
             }
             .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
             .font-bold { font-weight: 700; }
@@ -291,6 +310,7 @@ function DocumentsContent() {
             .w-20 { width: 80px; }
             .h-20 { height: 80px; }
             .w-48 { width: 192px; }
+            .w-52 { width: 208px; }
             .space-y-1 > * + * { margin-top: 4px; }
             .space-y-2 > * + * { margin-top: 8px; }
             .space-y-4 > * + * { margin-top: 14px; }
@@ -299,6 +319,7 @@ function DocumentsContent() {
             .justify-between { justify-content: space-between; }
             .items-center { align-items: center; }
             .items-end { align-items: flex-end; }
+            .relative { position: relative; }
             table { width: 100%; border-collapse: collapse; }
             th, td { padding: 6px 8px; font-size: 12px; }
             .bg-neutral-50 { background-color: #fafafa; }
@@ -312,7 +333,7 @@ function DocumentsContent() {
         </head>
         <body>
           <div style="padding: 10px 15px;">
-            ${printSheet.innerHTML}
+            ${html}
           </div>
         </body>
       </html>
@@ -334,6 +355,11 @@ function DocumentsContent() {
     const printSheet = document.getElementById('printable-certificate-sheet');
     if (!printSheet) return;
 
+    let html = printSheet.innerHTML;
+    // Embed self-contained base64 data URIs so offline saved file works 100% on any PC without internet
+    html = html.replace(/\/company-logo-mark\.svg/g, COMPANY_LOGO_DATA_URL);
+    html = html.replace(/\/signatures\/hr-signature-clean\.png/g, HR_SIGNATURE_DATA_URL);
+
     const docNo = previewData?.documentNo || 'DRAFT';
     const cleanDocNo = docNo.replace(/[^a-zA-Z0-9-]/g, '_');
     const filename = `${previewItem.documentType.code}_${cleanDocNo}.html`;
@@ -347,11 +373,13 @@ function DocumentsContent() {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${docTitle}</title>
   <style>
-    @page { size: A4 portrait; margin: 15mm 20mm; }
+    @page { size: A4 portrait; margin: 12mm 15mm; }
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-    body { margin: 0; padding: 40px 20px; background: #f3f4f6; color: #171717; display: flex; justify-content: center; }
-    .sheet-wrapper { background: #ffffff; width: 100%; max-width: 800px; padding: 48px; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-    @media print { body { background: white; padding: 0; } .sheet-wrapper { border: none; box-shadow: none; padding: 0; } }
+    body { margin: 0; padding: 40px 20px; background: #e5e7eb; color: #171717; display: flex; justify-content: center; }
+    .sheet-wrapper { background: #ffffff; width: 100%; max-width: 800px; padding: 48px; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+    @media print { body { background: white; padding: 0; } .sheet-wrapper { border: none; box-shadow: none; padding: 0; max-width: 100%; } }
+    .company-logo-img { height: 38px !important; max-height: 38px !important; width: auto !important; display: inline-block !important; vertical-align: middle !important; }
+    .hr-sig-img { height: 60px !important; max-height: 60px !important; width: auto !important; display: block !important; }
     .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
     .font-bold { font-weight: 700; }
     .font-semibold { font-weight: 600; }
@@ -386,6 +414,7 @@ function DocumentsContent() {
     .w-20 { width: 80px; }
     .h-20 { height: 80px; }
     .w-48 { width: 192px; }
+    .w-52 { width: 208px; }
     .space-y-1 > * + * { margin-top: 4px; }
     .space-y-2 > * + * { margin-top: 8px; }
     .space-y-4 > * + * { margin-top: 14px; }
@@ -394,6 +423,7 @@ function DocumentsContent() {
     .justify-between { justify-content: space-between; }
     .items-center { align-items: center; }
     .items-end { align-items: flex-end; }
+    .relative { position: relative; }
     table { width: 100%; border-collapse: collapse; }
     th, td { padding: 6px 8px; font-size: 12px; }
     .bg-neutral-50 { background-color: #fafafa; }
@@ -406,7 +436,7 @@ function DocumentsContent() {
 </head>
 <body>
   <div class="sheet-wrapper">
-    ${printSheet.innerHTML}
+    ${html}
   </div>
 </body>
 </html>`;
@@ -962,266 +992,231 @@ function DocumentsContent() {
         </div>
       )}
 
-      {/* Printable Sheet & Preview Drawer */}
+      {/* Full PDF View / Printable Sheet Drawer */}
       {previewItem && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto print-modal-backdrop no-print:not-target"
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/85 backdrop-blur-xs p-3 sm:p-8 overflow-y-auto print-modal-backdrop cursor-pointer"
           onClick={(e) => {
             if (e.target === e.currentTarget) handleClosePreview();
           }}
+          title="Click background to close"
         >
-          <div className="max-w-3xl w-full my-auto bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden flex flex-col print-modal-container max-h-[92vh]">
-            {/* Top Sticky Toolbar */}
-            <div className="p-3.5 sm:p-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between bg-neutral-50 dark:bg-neutral-950 no-print shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-sm text-neutral-900 dark:text-neutral-100">
-                  {previewData?.isDraft ? 'Draft Certificate Preview' : 'Official Certified Document'}
+          {/* Floating Action Controls */}
+          <div
+            className="fixed top-5 right-5 z-50 flex items-center gap-2 no-print"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={handleDirectPrint}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-white text-neutral-900 hover:bg-neutral-100 shadow-2xl border border-neutral-200 transition-all cursor-pointer"
+              title="Print document or Save as PDF"
+            >
+              <Printer className="w-4 h-4 text-neutral-800" />
+              <span>Print / Save PDF</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadFile}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-neutral-900 text-white hover:bg-neutral-800 shadow-2xl border border-neutral-700 transition-all cursor-pointer"
+              title="Download self-contained offline document file"
+            >
+              <Download className="w-4 h-4" />
+              <span>Save File</span>
+            </button>
+          </div>
+
+          {/* Full Sheet (PDF Paper View) */}
+          <div
+            id="printable-certificate-sheet"
+            className="w-full max-w-3xl bg-white text-neutral-900 p-8 sm:p-14 my-4 sm:my-8 relative shadow-2xl rounded-xl printable-certificate border border-neutral-200 min-h-[680px] cursor-default"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Draft Watermark Overlay */}
+            {previewData?.isDraft && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 select-none">
+                <div className="text-red-500/15 font-black text-5xl md:text-6xl -rotate-45 transform text-center uppercase tracking-widest border-4 border-dashed border-red-500/20 p-8 rounded-2xl">
+                  DRAFT PREVIEW<br />
+                  <span className="text-xl">NOT VALID FOR OFFICIAL USE</span>
+                </div>
+              </div>
+            )}
+
+            {/* Letterhead */}
+            <div className="text-center pb-6 border-b-2 border-neutral-900 space-y-1">
+              <div className="flex items-center justify-center gap-2.5">
+                <img
+                  src="/company-logo-mark.svg"
+                  alt="Azir Company Logo"
+                  className="company-logo-img object-contain select-none"
+                  style={{ height: '38px', maxHeight: '38px', width: 'auto', display: 'inline-block', verticalAlign: 'middle' }}
+                />
+                <span className="font-black text-xl tracking-tight text-neutral-900 uppercase">
+                  Azir Company Global Tech
                 </span>
-                {previewData?.isDraft ? (
-                  <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                    WATERMARKED DRAFT
-                  </span>
-                ) : (
-                  <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 flex items-center gap-1">
-                    <CheckCircle className="w-3 h-3" /> OFFICIAL & CERTIFIED
-                  </span>
-                )}
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleDirectPrint}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors shadow-xs cursor-pointer"
-                  title="Print document or Save as PDF"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>Print / PDF</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDownloadFile}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 transition-colors cursor-pointer"
-                  title="Download self-contained offline document file"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Save File</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleClosePreview}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-neutral-200 hover:bg-neutral-300 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 transition-colors cursor-pointer"
-                  title="Exit Document View (or press Escape)"
-                >
-                  <X className="w-4 h-4" />
-                  <span>Exit View</span>
-                  <span className="hidden sm:inline text-[10px] text-neutral-400 font-mono ml-0.5">[Esc]</span>
-                </button>
+              <p className="text-xs text-neutral-600 font-medium">
+                Human Resources Administration & Enterprise People Operations
+              </p>
+              <p className="text-[10px] text-neutral-500">
+                Manila, Philippines • inquiries@azircompany.test • www.azircompany.test
+              </p>
+            </div>
+
+            {/* Document Number & Date */}
+            <div className="flex items-center justify-between text-xs text-neutral-600 py-6">
+              <div>
+                <span className="font-bold text-neutral-900">Document No: </span>
+                <span className="font-mono">{previewData?.documentNo || 'DRAFT-PREVIEW'}</span>
+              </div>
+              <div>
+                <span className="font-bold text-neutral-900">Date: </span>
+                <span>{formatDate(previewData?.issuedAt || previewData?.requestedAt || new Date().toISOString())}</span>
               </div>
             </div>
 
-            {/* Scrollable Document Area */}
-            <div className="flex-1 overflow-y-auto bg-neutral-100 dark:bg-neutral-950/40 p-3 sm:p-8 flex justify-center">
-              <div
-                id="printable-certificate-sheet"
-                className="w-full max-w-2xl bg-white text-neutral-900 p-8 sm:p-12 relative shadow-lg rounded-xl printable-certificate border border-neutral-200/80 min-h-[500px]"
-              >
-                {/* Draft Watermark Overlay */}
-                {previewData?.isDraft && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 select-none">
-                    <div className="text-red-500/15 font-black text-5xl md:text-6xl -rotate-45 transform text-center uppercase tracking-widest border-4 border-dashed border-red-500/20 p-8 rounded-2xl">
-                      DRAFT PREVIEW<br />
-                      <span className="text-xl">NOT VALID FOR OFFICIAL USE</span>
+            {/* Certificate Title */}
+            <div className="text-center py-4">
+              <h2 className="text-lg font-black uppercase tracking-wider text-neutral-900 underline underline-offset-8">
+                {previewItem.documentType.name}
+              </h2>
+            </div>
+
+            {/* Certificate Content */}
+            <div className="py-6 text-sm text-neutral-800 leading-relaxed space-y-4">
+              <p className="font-bold">TO WHOM IT MAY CONCERN:</p>
+
+              {previewItem.documentType.code === 'COE' && (
+                <p>
+                  This is to certify that <strong className="uppercase">{previewData?.employee?.firstName} {previewData?.employee?.lastName}</strong> (Employee No. <span className="font-mono">{previewData?.employee?.employeeNo}</span>) is currently employed with <strong>Azir Company Global Tech</strong> as <strong>{previewData?.employee?.position}</strong> in the <strong>{previewData?.employee?.department || 'General'}</strong> department, having commenced employment on <strong>{formatDate(previewData?.employee?.hireDate)}</strong>.
+                </p>
+              )}
+
+              {previewItem.documentType.code === 'COE_COMPENSATION' && (
+                <>
+                  <p>
+                    This certifies that <strong className="uppercase">{previewData?.employee?.firstName} {previewData?.employee?.lastName}</strong> is an active employee of <strong>Azir Company Global Tech</strong> serving as <strong>{previewData?.employee?.position}</strong> since <strong>{formatDate(previewData?.employee?.hireDate)}</strong>.
+                  </p>
+                  <div className="p-4 rounded border border-neutral-300 bg-neutral-50 space-y-2 text-xs">
+                    <div className="font-bold text-neutral-900 border-b pb-1">COMPENSATION DETAILS:</div>
+                    <div className="flex justify-between">
+                      <span>Basic Monthly Salary:</span>
+                      <span className="font-mono font-semibold">₱ 45,000.00</span>
                     </div>
+                    <div className="flex justify-between">
+                      <span>De Minimis / Allowances:</span>
+                      <span className="font-mono font-semibold">₱ 5,000.00</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-1 font-bold">
+                      <span>Gross Monthly Pay:</span>
+                      <span className="font-mono">₱ 50,000.00</span>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {previewItem.documentType.code === 'LEAVE_CERT' && (
+                <>
+                  <p>
+                    This official certificate verifies the current leave credit standing of <strong className="uppercase">{previewData?.employee?.firstName} {previewData?.employee?.lastName}</strong> as of this calendar year:
+                  </p>
+                  <div className="p-4 rounded border border-neutral-300 bg-neutral-50 text-xs">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className="border-b font-semibold">
+                          <th className="pb-1">Leave Type</th>
+                          <th className="pb-1 text-center">Granted</th>
+                          <th className="pb-1 text-center">Used</th>
+                          <th className="pb-1 text-right">Available Balance</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {(previewData?.balances || []).map((b: any) => (
+                          <tr key={b.code}>
+                            <td className="py-1 font-medium">{b.name}</td>
+                            <td className="py-1 text-center font-mono">{b.balance + b.used}d</td>
+                            <td className="py-1 text-center font-mono">{b.used}d</td>
+                            <td className="py-1 text-right font-mono font-bold">{b.available}d</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+
+              {previewItem.documentType.code === 'PAYSLIP' && (
+                <>
+                  <p>
+                    This document serves as the certified official payslip breakdown for <strong className="uppercase">{previewData?.employee?.firstName} {previewData?.employee?.lastName}</strong> for the cutoff period <strong>{previewItem.payPeriod || 'Current Period'}</strong>:
+                  </p>
+                  <div className="p-4 rounded border border-neutral-300 bg-neutral-50 text-xs space-y-2">
+                    <div className="flex justify-between font-bold border-b pb-1">
+                      <span>EARNINGS & BASIC PAY:</span>
+                      <span className="font-mono">₱ 25,000.00</span>
+                    </div>
+                    <div className="flex justify-between text-neutral-600">
+                      <span>SSS / PhilHealth / Pag-IBIG:</span>
+                      <span className="font-mono">-₱ 2,150.00</span>
+                    </div>
+                    <div className="flex justify-between text-neutral-600">
+                      <span>BIR Withholding Tax:</span>
+                      <span className="font-mono">-₱ 1,850.00</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-neutral-900 border-t pt-1">
+                      <span>NET TAKE HOME PAY:</span>
+                      <span className="font-mono text-sm">₱ 21,000.00</span>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <p className="pt-2">
+                This certification is issued upon the request of the above-named employee for the purpose of <strong>"{previewItem.purpose}"</strong>.
+              </p>
+            </div>
+
+            {/* Signatures & QR Section */}
+            <div className="pt-10 flex items-end justify-between border-t border-neutral-200">
+              <div className="space-y-1 relative">
+                <div className="font-bold text-xs uppercase tracking-wider text-neutral-900">
+                  Certified by:
+                </div>
+
+                {/* HR Official E-Signature (displayed when approved) */}
+                {!previewData?.isDraft && (
+                  <div className="h-14 -mb-3 flex items-end pl-4">
+                    <img
+                      src="/signatures/hr-signature-clean.png"
+                      alt="HR Official E-Signature"
+                      className="hr-sig-img object-contain pointer-events-none select-none"
+                      style={{ height: '60px', maxHeight: '60px', width: 'auto', display: 'block' }}
+                    />
                   </div>
                 )}
 
-                {/* Letterhead */}
-                <div className="text-center pb-6 border-b-2 border-neutral-900 space-y-1">
-                  <div className="flex items-center justify-center gap-2">
-                    <CompanyLogo variant="mark" className="h-8 w-auto text-neutral-900" />
-                    <span className="font-black text-xl tracking-tight text-neutral-900 uppercase">
-                      Azir Company Global Tech
-                    </span>
-                  </div>
-                  <p className="text-xs text-neutral-600 font-medium">
-                    Human Resources Administration & Enterprise People Operations
-                  </p>
-                  <p className="text-[10px] text-neutral-500">
-                    Manila, Philippines • inquiries@azircompany.test • www.azircompany.test
-                  </p>
+                <div className="w-52 border-b border-neutral-900 pb-1 font-semibold text-xs text-neutral-900">
+                  {previewData?.reviewedBy
+                    ? `${previewData.reviewedBy.firstName} ${previewData.reviewedBy.lastName}`
+                    : 'Human Resources Dept.'}
                 </div>
-
-                {/* Document Number & Date */}
-                <div className="flex items-center justify-between text-xs text-neutral-600 py-6">
-                  <div>
-                    <span className="font-bold text-neutral-900">Document No: </span>
-                    <span className="font-mono">{previewData?.documentNo || 'DRAFT-PREVIEW'}</span>
-                  </div>
-                  <div>
-                    <span className="font-bold text-neutral-900">Date: </span>
-                    <span>{formatDate(previewData?.issuedAt || previewData?.requestedAt || new Date().toISOString())}</span>
-                  </div>
-                </div>
-
-                {/* Certificate Title */}
-                <div className="text-center py-4">
-                  <h2 className="text-lg font-black uppercase tracking-wider text-neutral-900 underline underline-offset-8">
-                    {previewItem.documentType.name}
-                  </h2>
-                </div>
-
-                {/* Certificate Content */}
-                <div className="py-6 text-sm text-neutral-800 leading-relaxed space-y-4">
-                  <p className="font-bold">TO WHOM IT MAY CONCERN:</p>
-
-                  {previewItem.documentType.code === 'COE' && (
-                    <p>
-                      This is to certify that <strong className="uppercase">{previewData?.employee?.firstName} {previewData?.employee?.lastName}</strong> (Employee No. <span className="font-mono">{previewData?.employee?.employeeNo}</span>) is currently employed with <strong>Azir Company Global Tech</strong> as <strong>{previewData?.employee?.position}</strong> in the <strong>{previewData?.employee?.department || 'General'}</strong> department, having commenced employment on <strong>{formatDate(previewData?.employee?.hireDate)}</strong>.
-                    </p>
-                  )}
-
-                  {previewItem.documentType.code === 'COE_COMPENSATION' && (
-                    <>
-                      <p>
-                        This certifies that <strong className="uppercase">{previewData?.employee?.firstName} {previewData?.employee?.lastName}</strong> is an active employee of <strong>Azir Company Global Tech</strong> serving as <strong>{previewData?.employee?.position}</strong> since <strong>{formatDate(previewData?.employee?.hireDate)}</strong>.
-                      </p>
-                      <div className="p-4 rounded border border-neutral-300 bg-neutral-50 space-y-2 text-xs">
-                        <div className="font-bold text-neutral-900 border-b pb-1">COMPENSATION DETAILS:</div>
-                        <div className="flex justify-between">
-                          <span>Basic Monthly Salary:</span>
-                          <span className="font-mono font-semibold">₱ 45,000.00</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>De Minimis / Allowances:</span>
-                          <span className="font-mono font-semibold">₱ 5,000.00</span>
-                        </div>
-                        <div className="flex justify-between border-t pt-1 font-bold">
-                          <span>Gross Monthly Pay:</span>
-                          <span className="font-mono">₱ 50,000.00</span>
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {previewItem.documentType.code === 'LEAVE_CERT' && (
-                    <>
-                      <p>
-                        This official certificate verifies the current leave credit standing of <strong className="uppercase">{previewData?.employee?.firstName} {previewData?.employee?.lastName}</strong> as of this calendar year:
-                      </p>
-                      <div className="p-4 rounded border border-neutral-300 bg-neutral-50 text-xs">
-                        <table className="w-full text-left">
-                          <thead>
-                            <tr className="border-b font-semibold">
-                              <th className="pb-1">Leave Type</th>
-                              <th className="pb-1 text-center">Granted</th>
-                              <th className="pb-1 text-center">Used</th>
-                              <th className="pb-1 text-right">Available Balance</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y">
-                            {(previewData?.balances || []).map((b: any) => (
-                              <tr key={b.code}>
-                                <td className="py-1 font-medium">{b.name}</td>
-                                <td className="py-1 text-center font-mono">{b.balance + b.used}d</td>
-                                <td className="py-1 text-center font-mono">{b.used}d</td>
-                                <td className="py-1 text-right font-mono font-bold">{b.available}d</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </>
-                  )}
-
-                  {previewItem.documentType.code === 'PAYSLIP' && (
-                    <>
-                      <p>
-                        This document serves as the certified official payslip breakdown for <strong className="uppercase">{previewData?.employee?.firstName} {previewData?.employee?.lastName}</strong> for the cutoff period <strong>{previewItem.payPeriod || 'Current Period'}</strong>:
-                      </p>
-                      <div className="p-4 rounded border border-neutral-300 bg-neutral-50 text-xs space-y-2">
-                        <div className="flex justify-between font-bold border-b pb-1">
-                          <span>EARNINGS & BASIC PAY:</span>
-                          <span className="font-mono">₱ 25,000.00</span>
-                        </div>
-                        <div className="flex justify-between text-neutral-600">
-                          <span>SSS / PhilHealth / Pag-IBIG:</span>
-                          <span className="font-mono">-₱ 2,150.00</span>
-                        </div>
-                        <div className="flex justify-between text-neutral-600">
-                          <span>BIR Withholding Tax:</span>
-                          <span className="font-mono">-₱ 1,850.00</span>
-                        </div>
-                        <div className="flex justify-between font-bold text-neutral-900 border-t pt-1">
-                          <span>NET TAKE HOME PAY:</span>
-                          <span className="font-mono text-sm">₱ 21,000.00</span>
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  <p className="pt-2">
-                    This certification is issued upon the request of the above-named employee for the purpose of <strong>"{previewItem.purpose}"</strong>.
-                  </p>
-                </div>
-
-                {/* Signatures & QR Section */}
-                <div className="pt-10 flex items-end justify-between border-t border-neutral-200">
-                  <div className="space-y-2">
-                    <div className="font-bold text-xs uppercase tracking-wider text-neutral-900">
-                      Certified by:
-                    </div>
-                    <div className="w-48 border-b border-neutral-900 pb-1 font-semibold text-xs">
-                      {previewData?.reviewedBy ? `${previewData.reviewedBy.firstName} ${previewData.reviewedBy.lastName}` : 'Human Resources Dept.'}
-                    </div>
-                    <div className="text-[11px] text-neutral-500">
-                      People & Culture Division • Azir Company
-                    </div>
-                  </div>
-
-                  {/* QR Code */}
-                  {qrDataUrl && (
-                    <div className="flex flex-col items-center text-center">
-                      <img src={qrDataUrl} alt="Document Verification QR" className="w-20 h-20 border rounded p-1 bg-white" />
-                      <span className="text-[9px] font-mono text-neutral-500 mt-1">Scan to Verify Authenticity</span>
-                    </div>
-                  )}
+                <div className="text-[11px] text-neutral-500">
+                  People & Culture Division • Azir Company
                 </div>
               </div>
-            </div>
 
-            {/* Bottom Sticky Action Bar */}
-            <div className="p-3 sm:p-4 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 flex items-center justify-between no-print shrink-0">
-              <div className="text-[11px] text-neutral-500 hidden md:block">
-                {previewData?.isDraft
-                  ? 'Draft preview mode. Official verification code & legal serial stamp unlock upon HR approval.'
-                  : 'Official Azir Company record. Scan QR code or visit /verify to validate authenticity.'}
-              </div>
-              <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-                <button
-                  type="button"
-                  onClick={handleDirectPrint}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors shadow-xs cursor-pointer"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  Print / Save PDF
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDownloadFile}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 transition-colors cursor-pointer"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Save File
-                </button>
-                <button
-                  type="button"
-                  onClick={handleClosePreview}
-                  className="inline-flex items-center gap-1 px-4 py-1.5 text-xs font-bold rounded-lg bg-neutral-200 hover:bg-neutral-300 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-900 dark:text-neutral-100 transition-colors cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                  Exit View
-                </button>
-              </div>
+              {/* QR Code */}
+              {qrDataUrl && (
+                <div className="flex flex-col items-center text-center">
+                  <img
+                    src={qrDataUrl}
+                    alt="Document Verification QR"
+                    className="w-20 h-20 border rounded p-1 bg-white"
+                    style={{ width: '80px', height: '80px' }}
+                  />
+                  <span className="text-[9px] font-mono text-neutral-500 mt-1">Scan to Verify Authenticity</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
