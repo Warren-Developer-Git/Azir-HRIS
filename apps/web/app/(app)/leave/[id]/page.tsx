@@ -363,7 +363,7 @@ export default function LeaveDetailPage() {
                   type="date"
                   value={editStartDate}
                   onChange={(e) => setEditStartDate(e.target.value)}
-                  className="w-full px-3 py-1.5 text-sm rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white"
+                  className="w-full px-3 py-1.5 text-sm rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white cursor-pointer dark:[color-scheme:dark]"
                   required
                 />
               </div>
@@ -377,7 +377,7 @@ export default function LeaveDetailPage() {
                   value={editEndDate}
                   min={editStartDate}
                   onChange={(e) => setEditEndDate(e.target.value)}
-                  className="w-full px-3 py-1.5 text-sm rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white"
+                  className="w-full px-3 py-1.5 text-sm rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white cursor-pointer dark:[color-scheme:dark]"
                   required
                 />
               </div>

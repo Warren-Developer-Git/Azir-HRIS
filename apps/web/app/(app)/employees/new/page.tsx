@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api, ApiError } from '@/lib/api';
@@ -12,6 +12,7 @@ import {
   KeyRound,
   Copy,
   Check,
+  CalendarDays,
 } from 'lucide-react';
 
 interface Department {
@@ -38,6 +39,7 @@ export default function NewEmployeePage() {
   const [departmentId, setDepartmentId] = useState('');
   const [managerId, setManagerId] = useState('');
   const [hireDate, setHireDate] = useState('');
+  const hireDateRef = useRef<HTMLInputElement>(null);
   const [gender, setGender] = useState<'MALE' | 'FEMALE'>('FEMALE');
   const [maritalStatus, setMaritalStatus] = useState<'SINGLE' | 'MARRIED' | 'WIDOWED' | 'DIVORCED'>('SINGLE');
   const [roles, setRoles] = useState<string[]>(['EMPLOYEE']);
@@ -280,13 +282,25 @@ export default function NewEmployeePage() {
               <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300">
                 Date of Hire *
               </label>
-              <input
-                type="date"
-                required
-                value={hireDate}
-                onChange={(e) => setHireDate(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white"
-              />
+              <div className="relative flex items-center">
+                <input
+                  ref={hireDateRef}
+                  type="date"
+                  required
+                  value={hireDate}
+                  onChange={(e) => setHireDate(e.target.value)}
+                  className="w-full pl-3 pr-10 py-2 text-sm rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white cursor-pointer dark:[color-scheme:dark]"
+                />
+                <button
+                  type="button"
+                  onClick={() => hireDateRef.current?.showPicker?.()}
+                  className="absolute right-2.5 p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 dark:text-neutral-200 transition-colors"
+                  title="Open calendar picker"
+                  tabIndex={-1}
+                >
+                  <CalendarDays className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
 

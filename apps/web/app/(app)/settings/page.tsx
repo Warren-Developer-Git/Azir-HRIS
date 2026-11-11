@@ -814,7 +814,7 @@ export default function SettingsPage() {
                   disabled={!!editingHoliday}
                   value={holidayDate}
                   onChange={(e) => setHolidayDate(e.target.value)}
-                  className="w-full px-3 py-2 text-sm rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-black font-mono disabled:opacity-50"
+                  className="w-full px-3 py-2 text-sm rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-black font-mono disabled:opacity-50 cursor-pointer dark:[color-scheme:dark]"
                 />
               </div>
 

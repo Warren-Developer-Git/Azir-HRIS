@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api, ApiError } from '@/lib/api';
-import { CalendarDays, ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
+import { CalendarDays, ArrowLeft, Loader2, AlertCircle, Info, Calendar } from 'lucide-react';
 
 interface LeaveType {
   id: string;
@@ -14,6 +14,17 @@ interface LeaveType {
   defaultDays: number;
   countingMode: 'WORKING_DAYS' | 'CALENDAR_DAYS';
   description?: string;
+}
+
+interface ExistingLeave {
+  id: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  leaveType: {
+    name: string;
+    code: string;
+  };
 }
 
 function toYMD(val: string): string {
@@ -46,23 +57,35 @@ export default function NewLeavePage() {
   const [isLoadingTypes, setIsLoadingTypes] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [existingLeaves, setExistingLeaves] = useState<ExistingLeave[]>([]);
+
+  const startDateRef = useRef<HTMLInputElement>(null);
+  const endDateRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    async function loadTypes() {
+    async function loadData() {
       try {
         setIsLoadingTypes(true);
-        const data = await api<LeaveType[]>('/leave-types');
-        setTypes(data);
-        if (data.length > 0) {
-          setSelectedTypeId(data[0].id);
+        const [typesData, leavesData] = await Promise.all([
+          api<LeaveType[]>('/leave-types'),
+          api<ExistingLeave[]>('/leave/requests?scope=mine').catch(() => []),
+        ]);
+        setTypes(typesData);
+        if (typesData.length > 0) {
+          setSelectedTypeId(typesData[0].id);
         }
+        // Filter only active/booked leaves (pending or approved)
+        const active = (leavesData || []).filter((l) =>
+          ['PENDING_MANAGER', 'PENDING_HR', 'APPROVED'].includes(l.status),
+        );
+        setExistingLeaves(active);
       } catch (err: any) {
         setErrorMessage('Failed to load leave types. Please try again.');
       } finally {
         setIsLoadingTypes(false);
       }
     }
-    loadTypes();
+    loadData();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -110,6 +133,7 @@ export default function NewLeavePage() {
   };
 
   const selectedType = types.find((t) => t.id === selectedTypeId);
+  const isOverlapError = errorMessage && /overlap/i.test(errorMessage);
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -139,6 +163,49 @@ export default function NewLeavePage() {
             <div className="text-neutral-600 dark:text-neutral-400 text-xs mt-0.5">
               {errorMessage}
             </div>
+            {isOverlapError && (
+              <div className="mt-2 text-xs">
+                <span className="text-neutral-500">
+                  You already have an active leave request covering one or more of these dates. Please choose different dates, or{' '}
+                </span>
+                <Link
+                  href="/leave"
+                  className="font-semibold text-neutral-900 dark:text-neutral-100 underline hover:no-underline"
+                >
+                  view / cancel your existing request &rarr;
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Existing booked leaves notice */}
+      {existingLeaves.length > 0 && (
+        <div className="p-3.5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50/60 dark:bg-neutral-900/60 text-xs space-y-2">
+          <div className="font-semibold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
+            <Info className="w-3.5 h-3.5 text-neutral-500" />
+            Your Currently Booked Leave Dates
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+            {existingLeaves.map((l) => (
+              <div
+                key={l.id}
+                className="p-2 rounded border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 flex items-center justify-between gap-2"
+              >
+                <div>
+                  <div className="font-medium text-neutral-900 dark:text-neutral-100">
+                    {l.leaveType.name}
+                  </div>
+                  <div className="text-[11px] text-neutral-500 font-mono">
+                    {l.startDate.slice(0, 10)} to {l.endDate.slice(0, 10)}
+                  </div>
+                </div>
+                <span className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 font-semibold">
+                  {l.status.replace(/_/g, ' ')}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -184,32 +251,56 @@ export default function NewLeavePage() {
             <label className="block text-sm font-medium text-neutral-900 dark:text-neutral-100">
               Start Date
             </label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => {
-                setStartDate(e.target.value);
-                if (!endDate || e.target.value > endDate) {
-                  setEndDate(e.target.value);
-                }
-              }}
-              className="w-full px-3 py-2 text-sm rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white"
-              required
-            />
+            <div className="relative flex items-center">
+              <input
+                ref={startDateRef}
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  if (!endDate || e.target.value > endDate) {
+                    setEndDate(e.target.value);
+                  }
+                }}
+                className="w-full pl-3 pr-10 py-2 text-sm rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white cursor-pointer dark:[color-scheme:dark]"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => startDateRef.current?.showPicker?.()}
+                className="absolute right-2.5 p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 dark:text-neutral-200 transition-colors"
+                title="Open calendar picker"
+                tabIndex={-1}
+              >
+                <CalendarDays className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-neutral-900 dark:text-neutral-100">
               End Date
             </label>
-            <input
-              type="date"
-              value={endDate}
-              min={startDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full px-3 py-2 text-sm rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white"
-              required
-            />
+            <div className="relative flex items-center">
+              <input
+                ref={endDateRef}
+                type="date"
+                value={endDate}
+                min={startDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full pl-3 pr-10 py-2 text-sm rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white cursor-pointer dark:[color-scheme:dark]"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => endDateRef.current?.showPicker?.()}
+                className="absolute right-2.5 p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 dark:text-neutral-200 transition-colors"
+                title="Open calendar picker"
+                tabIndex={-1}
+              >
+                <CalendarDays className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
 
