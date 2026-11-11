@@ -29,6 +29,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'holiday.write',
     'role.assign',
     'employee.read.all',
+    'employee.write',
+    'balance.adjust',
     'audit.read',
   ],
   HR: [

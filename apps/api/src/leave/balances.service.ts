@@ -117,7 +117,6 @@ export class BalancesService {
 
           const eligible = isEligibleForGrant(
             {
-              code: type.code,
               kind: type.kind as 'YEARLY',
               defaultDays: type.defaultDays,
               countingMode: type.countingMode as any,

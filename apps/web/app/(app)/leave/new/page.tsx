@@ -16,6 +16,26 @@ interface LeaveType {
   description?: string;
 }
 
+function toYMD(val: string): string {
+  if (!val) return '';
+  const trimmed = val.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  if (trimmed.includes('T')) return trimmed.split('T')[0];
+  if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(trimmed)) {
+    const [y, m, d] = trimmed.split('/');
+    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(trimmed)) {
+    const [m, d, y] = trimmed.split('/');
+    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+  const d = new Date(val);
+  if (!isNaN(d.getTime())) {
+    return d.toISOString().split('T')[0];
+  }
+  return trimmed;
+}
+
 export default function NewLeavePage() {
   const router = useRouter();
   const [types, setTypes] = useState<LeaveType[]>([]);
@@ -49,11 +69,14 @@ export default function NewLeavePage() {
     e.preventDefault();
     setErrorMessage(null);
 
+    const cleanStart = toYMD(startDate);
+    const cleanEnd = toYMD(endDate);
+
     if (!selectedTypeId) {
       setErrorMessage('Please select a leave type.');
       return;
     }
-    if (!startDate || !endDate) {
+    if (!cleanStart || !cleanEnd) {
       setErrorMessage('Start date and end date are required.');
       return;
     }
@@ -68,8 +91,8 @@ export default function NewLeavePage() {
         method: 'POST',
         body: JSON.stringify({
           leaveTypeId: selectedTypeId,
-          startDate,
-          endDate,
+          startDate: cleanStart,
+          endDate: cleanEnd,
           reason: reason.trim(),
         }),
       });

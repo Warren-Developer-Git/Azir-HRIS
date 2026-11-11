@@ -84,6 +84,7 @@ export default function NewEmployeePage() {
 
     try {
       setIsSubmitting(true);
+      const cleanHireDate = hireDate.includes('T') ? hireDate.split('T')[0] : hireDate.replace(/\//g, '-');
       const res = await api<{ employee: { id: string }; temporaryPassword: string }>(
         '/employees',
         {
@@ -94,9 +95,9 @@ export default function NewEmployeePage() {
             email: email.trim().toLowerCase(),
             employeeNo: employeeNo.trim(),
             position: position.trim(),
-            departmentId: departmentId || undefined,
-            managerId: managerId || undefined,
-            hireDate,
+            departmentId: departmentId && departmentId.trim() ? departmentId.trim() : undefined,
+            managerId: managerId && managerId.trim() ? managerId.trim() : undefined,
+            hireDate: cleanHireDate,
             gender,
             maritalStatus,
             roles,

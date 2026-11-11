@@ -164,6 +164,34 @@ export class EmployeesService {
         throw new ConflictException('Employee number is already in use');
       }
 
+      // Validate department if provided
+      const departmentId = dto.departmentId && dto.departmentId.trim() ? dto.departmentId.trim() : null;
+      if (departmentId) {
+        const dept = await tx.department.findFirst({
+          where: { id: departmentId, tenantId: user.tenantId },
+        });
+        if (!dept) {
+          throw new BadRequestException('Selected department does not exist');
+        }
+      }
+
+      // Validate manager if provided
+      const managerId = dto.managerId && dto.managerId.trim() ? dto.managerId.trim() : null;
+      if (managerId) {
+        const mgr = await tx.employee.findFirst({
+          where: { id: managerId, tenantId: user.tenantId },
+        });
+        if (!mgr) {
+          throw new BadRequestException('Selected manager does not exist');
+        }
+      }
+
+      // Validate hireDate
+      const parsedHireDate = new Date(dto.hireDate);
+      if (isNaN(parsedHireDate.getTime())) {
+        throw new BadRequestException('hireDate must be a valid date string (YYYY-MM-DD)');
+      }
+
       const temporaryPassword = crypto.randomBytes(9).toString('base64url');
       const passwordHash = await bcrypt.hash(temporaryPassword, 10);
 
@@ -184,10 +212,10 @@ export class EmployeesService {
           employeeNo: dto.employeeNo.trim(),
           firstName: dto.firstName.trim(),
           lastName: dto.lastName.trim(),
-          departmentId: dto.departmentId ?? null,
+          departmentId,
           position: dto.position.trim(),
-          managerId: dto.managerId ?? null,
-          hireDate: new Date(dto.hireDate),
+          managerId,
+          hireDate: parsedHireDate,
           gender: dto.gender,
           maritalStatus: dto.maritalStatus,
           status: 'ACTIVE',
