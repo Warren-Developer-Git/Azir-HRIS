@@ -65,3 +65,56 @@ input[type="month"]::-webkit-calendar-picker-indicator:hover {
 .dark input[type="month"]::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
 }
+
+/* Print optimization for official documents and certificates */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #171717 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide web app chrome, sidebars, headers, backdrops, and interactive controls */
+  aside,
+  nav,
+  header,
+  footer,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Modal container reset for clean full-page print */
+  .print-modal-backdrop {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    inset: auto !important;
+    display: block !important;
+  }
+
+  .print-modal-container {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    overflow: visible !important;
+  }
+
+  .printable-certificate {
+    padding: 0 !important;
+    border: none !important;
+    background: white !important;
+    color: black !important;
+    width: 100% !important;
+    page-break-inside: avoid !important;
+  }
+}
