@@ -1,1 +1,3 @@
-export { default } from '../audit-logs/page';
+import AuditLogsPage from '../audit-logs/page';
+
+export default AuditLogsPage;

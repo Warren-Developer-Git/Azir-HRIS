@@ -11,6 +11,12 @@ export interface AuditRecordInput {
   after?: Record<string, any> | null;
 }
 
+export interface AuditListOptions {
+  entity?: string;
+  before?: string;
+  limit?: number;
+}
+
 @Injectable()
 export class AuditService {
   async record(tx: Prisma.TransactionClient, input: AuditRecordInput): Promise<void> {
@@ -27,9 +33,30 @@ export class AuditService {
     });
   }
 
-  async list(tx: Prisma.TransactionClient, tenantId: string, limit = 50) {
+  async list(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    options?: AuditListOptions | number,
+  ) {
+    const where: any = { tenantId };
+    let limit = 50;
+
+    if (typeof options === 'number') {
+      limit = options;
+    } else if (options) {
+      if (options.entity) {
+        where.entity = options.entity;
+      }
+      if (options.before) {
+        where.createdAt = { lt: new Date(options.before) };
+      }
+      if (options.limit) {
+        limit = options.limit;
+      }
+    }
+
     return tx.auditLog.findMany({
-      where: { tenantId },
+      where,
       include: {
         actor: {
           select: {

@@ -15,11 +15,13 @@ export class AuditController {
   @Get()
   async listAuditLogs(
     @CurrentUser() user: AuthUser,
+    @Query('entity') entity?: string,
+    @Query('before') before?: string,
     @Query('limit') limitStr?: string,
   ) {
     const limit = limitStr ? parseInt(limitStr, 10) : 50;
     return this.prisma.withTenant(user.tenantId, (tx) =>
-      this.auditService.list(tx, user.tenantId, limit),
+      this.auditService.list(tx, user.tenantId, { entity, before, limit }),
     );
   }
 }
