@@ -98,6 +98,48 @@ export async function resetAndSeedTestDb(ownerDb: PrismaClient) {
     },
   });
 
+  // Document Types for Acme
+  await ownerDb.documentType.createMany({
+    data: [
+      {
+        tenantId: acme.id,
+        code: 'COE',
+        name: 'Certificate of Employment',
+        description: 'Standard certification of employment status, position, and tenure.',
+        requiresApproval: true,
+        includesSalary: false,
+        slaDays: 3,
+      },
+      {
+        tenantId: acme.id,
+        code: 'COE_COMPENSATION',
+        name: 'Certificate of Employment with Compensation',
+        description: 'Employment certificate including monthly basic salary and allowances.',
+        requiresApproval: true,
+        includesSalary: true,
+        slaDays: 3,
+      },
+      {
+        tenantId: acme.id,
+        code: 'LEAVE_CERT',
+        name: 'Leave Balance Certification',
+        description: 'Official certified statement of accrued, used, and available leave credits.',
+        requiresApproval: true,
+        includesSalary: false,
+        slaDays: 3,
+      },
+      {
+        tenantId: acme.id,
+        code: 'PAYSLIP',
+        name: 'Official Certified Payslip',
+        description: 'Certified payslip copy for bank, visa, or loan application purposes.',
+        requiresApproval: true,
+        includesSalary: true,
+        slaDays: 3,
+      },
+    ],
+  });
+
   // Holidays
   await ownerDb.holiday.createMany({
     data: [

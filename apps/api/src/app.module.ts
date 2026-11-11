@@ -9,6 +9,7 @@ import { EmployeesModule } from './employees/employees.module.js';
 import { AuditModule } from './audit/audit.module.js';
 import { SettingsModule } from './settings/settings.module.js';
 import { DashboardModule } from './dashboard/dashboard.module.js';
+import { DocumentsModule } from './documents/documents.module.js';
 import { JwtAuthGuard } from './auth/jwt-auth.guard.js';
 import { PermissionsGuard } from './auth/permissions.guard.js';
 
@@ -22,6 +23,7 @@ import { PermissionsGuard } from './auth/permissions.guard.js';
     AuditModule,
     SettingsModule,
     DashboardModule,
+    DocumentsModule,
   ],
   controllers: [HealthController],
   providers: [

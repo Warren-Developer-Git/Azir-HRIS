@@ -57,4 +57,28 @@ export class PrismaService
     `;
     return rows[0] ?? null;
   }
+
+  async verifyDocument(code: string): Promise<{
+    documentNo: string;
+    documentType: string;
+    issuedAt: Date;
+    status: string;
+    organization: string;
+    maskedEmployeeName: string;
+  } | null> {
+    const rows = await this.$queryRaw<
+      Array<{
+        documentNo: string;
+        documentType: string;
+        issuedAt: Date;
+        status: string;
+        organization: string;
+        maskedEmployeeName: string;
+      }>
+    >`
+      SELECT "documentNo", "documentType", "issuedAt", "status", "organization", "maskedEmployeeName"
+      FROM app_verify_document(${code})
+    `;
+    return rows[0] ?? null;
+  }
 }

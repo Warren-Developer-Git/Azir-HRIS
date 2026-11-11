@@ -70,21 +70,43 @@ enum HolidayType {
   SPECIAL
 }
 
+enum DocumentTypeCode {
+  COE
+  COE_COMPENSATION
+  LEAVE_CERT
+  PAYSLIP
+}
+
+enum DocumentRequestStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum IssuedDocumentStatus {
+  VALID
+  REVOKED
+}
+
 model Tenant {
   id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
   name      String
   createdAt DateTime @default(now())
 
-  users          User[]
-  employees      Employee[]
-  departments    Department[]
-  leaveTypes     LeaveType[]
-  leaveLedger    LeaveLedgerEntry[]
-  leaveRequests  LeaveRequest[]
-  leaveApprovals LeaveApproval[]
-  holidays       Holiday[]
-  notifications  Notification[]
-  auditLogs      AuditLog[]
+  users            User[]
+  employees        Employee[]
+  departments      Department[]
+  leaveTypes       LeaveType[]
+  leaveLedger      LeaveLedgerEntry[]
+  leaveRequests    LeaveRequest[]
+  leaveApprovals   LeaveApproval[]
+  holidays         Holiday[]
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+  documentTypes    DocumentType[]
+  documentRequests DocumentRequest[]
+  issuedDocuments  IssuedDocument[]
 }
 
 model User {
@@ -131,6 +153,9 @@ model Employee {
   leaveLedger  LeaveLedgerEntry[]
   requests     LeaveRequest[]
   approvals    LeaveApproval[]
+  requestedDocs DocumentRequest[] @relation("RequestedDocs")
+  reviewedDocs  DocumentRequest[] @relation("ReviewedDocs")
+  issuedDocs    IssuedDocument[]
 
   @@unique([tenantId, employeeNo])
   @@index([tenantId, managerId])
@@ -273,4 +298,67 @@ model AuditLog {
   actor  User   @relation(fields: [actorId], references: [id])
 
   @@index([tenantId, createdAt])
+}
+
+model DocumentType {
+  id               String           @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  tenantId         String           @db.Uuid
+  code             DocumentTypeCode
+  name             String
+  description      String
+  requiresApproval Boolean          @default(true)
+  includesSalary   Boolean          @default(false)
+  slaDays          Int              @default(3) // DOLE 3-day SLA
+  active           Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+
+  tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requests DocumentRequest[]
+
+  @@unique([tenantId, code])
+}
+
+model DocumentRequest {
+  id             String                @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  tenantId       String                @db.Uuid
+  employeeId     String                @db.Uuid
+  documentTypeId String                @db.Uuid
+  purpose        String
+  payPeriod      String?               // Optional: For PAYSLIP document requests (e.g. "October 16-31, 2026")
+  status         DocumentRequestStatus @default(PENDING_APPROVAL)
+  requestedAt    DateTime              @default(now())
+  dueAt          DateTime              // DOLE 3 working days target
+  reviewedById   String?               @db.Uuid
+  reviewedAt     DateTime?
+  rejectReason   String?
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee       Employee        @relation("RequestedDocs", fields: [employeeId], references: [id], onDelete: Cascade)
+  reviewedBy     Employee?       @relation("ReviewedDocs", fields: [reviewedById], references: [id])
+  documentType   DocumentType    @relation(fields: [documentTypeId], references: [id], onDelete: Cascade)
+  issuedDocument IssuedDocument?
+
+  @@index([tenantId, employeeId])
+  @@index([tenantId, status])
+}
+
+model IssuedDocument {
+  id               String               @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  tenantId         String               @db.Uuid
+  requestId        String               @unique @db.Uuid
+  documentNo       String               // e.g. "AZIR-DOC-2026-0001"
+  verificationCode String               @unique // Secure random token for QR code
+  snapshotData     Json                 // Immutable frozen snapshot of employee details, salary, & leave details
+  issuedAt         DateTime             @default(now())
+  issuedById       String               @db.Uuid
+  status           IssuedDocumentStatus @default(VALID)
+  revokedAt        DateTime?
+  revokedReason    String?
+
+  tenant   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  request  DocumentRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  issuedBy Employee        @relation(fields: [issuedById], references: [id])
+
+  @@unique([tenantId, documentNo])
+  @@index([tenantId, verificationCode])
 }

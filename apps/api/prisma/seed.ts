@@ -143,6 +143,51 @@ async function main() {
     });
   }
 
+  // Document Types Preset
+  const defaultDocTypes = [
+    {
+      code: 'COE' as const,
+      name: 'Certificate of Employment',
+      description: 'Standard certification of employment status, position, and tenure.',
+      requiresApproval: true,
+      includesSalary: false,
+      slaDays: 3,
+    },
+    {
+      code: 'COE_COMPENSATION' as const,
+      name: 'Certificate of Employment with Compensation',
+      description: 'Employment certificate including monthly basic salary and allowances.',
+      requiresApproval: true,
+      includesSalary: true,
+      slaDays: 3,
+    },
+    {
+      code: 'LEAVE_CERT' as const,
+      name: 'Leave Balance Certification',
+      description: 'Official certified statement of accrued, used, and available leave credits.',
+      requiresApproval: true,
+      includesSalary: false,
+      slaDays: 3,
+    },
+    {
+      code: 'PAYSLIP' as const,
+      name: 'Official Certified Payslip',
+      description: 'Certified payslip copy for bank, visa, or loan application purposes.',
+      requiresApproval: true,
+      includesSalary: true,
+      slaDays: 3,
+    },
+  ];
+
+  for (const doc of defaultDocTypes) {
+    await prisma.documentType.create({
+      data: {
+        tenantId: acme.id,
+        ...doc,
+      },
+    });
+  }
+
   // Helper to create User + Employee
   async function createEmp(tenantId: string, data: {
     email: string;
@@ -634,6 +679,15 @@ async function main() {
         date: new Date(h.date),
         name: h.name,
         type: h.type,
+      },
+    });
+  }
+
+  for (const doc of defaultDocTypes) {
+    await prisma.documentType.create({
+      data: {
+        tenantId: bayanihan.id,
+        ...doc,
       },
     });
   }

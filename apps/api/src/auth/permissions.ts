@@ -12,6 +12,9 @@ export type Permission =
   | 'leave.file'
   | 'leave.approve.manager'
   | 'leave.approve.hr'
+  | 'document.request'
+  | 'document.approve'
+  | 'document.approve.compensation'
   | 'audit.read';
 
 export interface AuthUser {
@@ -31,6 +34,9 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'employee.read.all',
     'employee.write',
     'balance.adjust',
+    'document.request',
+    'document.approve',
+    'document.approve.compensation',
     'audit.read',
   ],
   HR: [
@@ -38,10 +44,13 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'employee.write',
     'balance.adjust',
     'leave.approve.hr',
+    'document.request',
+    'document.approve',
+    'document.approve.compensation',
     'audit.read',
   ],
-  MANAGER: ['team.read', 'leave.approve.manager'],
-  EMPLOYEE: ['leave.file'],
+  MANAGER: ['team.read', 'leave.approve.manager', 'document.request'],
+  EMPLOYEE: ['leave.file', 'document.request'],
 };
 
 export function hasPermission(user: AuthUser, permission: Permission): boolean {

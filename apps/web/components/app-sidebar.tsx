@@ -20,6 +20,7 @@ import {
   LogOut,
   Menu,
   X,
+  FileText,
 } from 'lucide-react';
 
 export function AppSidebar() {
@@ -45,6 +46,12 @@ export function AppSidebar() {
       href: '/approvals',
       icon: CheckSquare,
       visible: can('leave.approve.manager') || can('leave.approve.hr'),
+    },
+    {
+      label: 'Documents',
+      href: '/documents',
+      icon: FileText,
+      visible: true,
     },
     {
       label: 'Team',
