@@ -51,8 +51,13 @@ export default function NewEmployeePage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Success dialog state
-  const [createdPassword, setCreatedPassword] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [createdCreds, setCreatedCreds] = useState<{
+    name: string;
+    email: string;
+    employeeNo: string;
+    password: string;
+  } | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadMeta() {
@@ -107,7 +112,12 @@ export default function NewEmployeePage() {
         },
       );
 
-      setCreatedPassword(res.temporaryPassword);
+      setCreatedCreds({
+        name: `${firstName.trim()} ${lastName.trim()}`,
+        email: email.trim().toLowerCase(),
+        employeeNo: employeeNo.trim(),
+        password: res.temporaryPassword,
+      });
     } catch (err: any) {
       setErrorMessage(err instanceof ApiError ? err.message : 'Failed to create employee');
     } finally {
@@ -115,12 +125,19 @@ export default function NewEmployeePage() {
     }
   };
 
-  const handleCopyPassword = () => {
-    if (createdPassword) {
-      navigator.clipboard.writeText(createdPassword);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+  const handleCopy = (text: string, field: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const handleCopyAll = () => {
+    if (!createdCreds) return;
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+    const text = `HRMS Portal Login Credentials:\nEmployee: ${createdCreds.name} (${createdCreds.employeeNo})\nWork Email: ${createdCreds.email}\nTemporary Password: ${createdCreds.password}\nLogin URL: ${origin}/login`;
+    navigator.clipboard.writeText(text);
+    setCopiedField('all');
+    setTimeout(() => setCopiedField(null), 2000);
   };
 
   return (
@@ -387,49 +404,93 @@ export default function NewEmployeePage() {
         </div>
       </form>
 
-      {/* Temporary Password Modal */}
-      {createdPassword && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="max-w-md w-full rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 space-y-4 shadow-xl">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-neutral-100 dark:bg-neutral-800">
-                <KeyRound className="w-5 h-5 text-neutral-900 dark:text-white" />
+      {/* Credentials Modal */}
+      {createdCreds && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in duration-200">
+          <div className="max-w-lg w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 space-y-5 shadow-2xl">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 shrink-0">
+                <KeyRound className="w-5 h-5 text-neutral-900 dark:text-neutral-100" />
               </div>
-              <div>
-                <h3 className="font-bold text-base text-neutral-900 dark:text-neutral-100">
-                  Employee Created!
+              <div className="flex-1">
+                <h3 className="font-bold text-lg text-neutral-900 dark:text-neutral-100">
+                  Employee Created Successfully!
                 </h3>
-                <p className="text-xs text-neutral-500">
-                  One-time temporary password generated for {email}
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  The employee record is active. Here are the one-time portal login credentials.
                 </p>
               </div>
             </div>
 
-            <div className="p-4 rounded-md border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-950 flex items-center justify-between">
-              <code className="text-base font-mono font-bold text-neutral-900 dark:text-white">
-                {createdPassword}
-              </code>
-              <button
-                onClick={handleCopyPassword}
-                type="button"
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-800"
-              >
-                {copied ? <Check className="w-3.5 h-3.5 text-neutral-900 dark:text-white" /> : <Copy className="w-3.5 h-3.5" />}
-                {copied ? 'Copied' : 'Copy'}
-              </button>
+            {/* Credential Details */}
+            <div className="space-y-3 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-950/50 p-4 text-xs">
+              <div className="flex items-center justify-between pb-2 border-b border-neutral-200 dark:border-neutral-800">
+                <span className="text-neutral-500 font-medium">Employee</span>
+                <span className="font-semibold text-neutral-900 dark:text-neutral-100">
+                  {createdCreds.name} ({createdCreds.employeeNo})
+                </span>
+              </div>
+
+              {/* Email */}
+              <div className="space-y-1">
+                <label className="text-neutral-500 font-medium block">
+                  Work Email (Login Username)
+                </label>
+                <div className="flex items-center justify-between gap-2 p-2 rounded border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+                  <span className="font-mono text-neutral-900 dark:text-neutral-100 select-all">
+                    {createdCreds.email}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(createdCreds.email, 'email')}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 transition-colors"
+                  >
+                    {copiedField === 'email' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                    {copiedField === 'email' ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Temporary Password */}
+              <div className="space-y-1">
+                <label className="text-neutral-500 font-medium block">
+                  Temporary Password
+                </label>
+                <div className="flex items-center justify-between gap-2 p-2 rounded border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+                  <code className="font-mono font-bold text-sm text-neutral-900 dark:text-white select-all">
+                    {createdCreds.password}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(createdCreds.password, 'password')}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 transition-colors"
+                  >
+                    {copiedField === 'password' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                    {copiedField === 'password' ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <p className="text-xs text-neutral-400">
-              Please share this temporary password securely with the employee. They will use this password to sign in to the portal.
+            <p className="text-xs text-neutral-500 leading-relaxed">
+              The new employee can immediately sign in at the <span className="font-semibold text-neutral-700 dark:text-neutral-300">Sign In</span> page using this work email and temporary password.
             </p>
 
-            <div className="pt-2 flex justify-end">
+            <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={handleCopyAll}
+                className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-900 dark:text-neutral-100 transition-colors"
+              >
+                {copiedField === 'all' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                {copiedField === 'all' ? 'Copied All to Clipboard!' : 'Copy All Credentials'}
+              </button>
               <button
                 type="button"
                 onClick={() => router.push('/employees')}
-                className="px-4 py-2 text-xs font-semibold rounded bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-200"
+                className="px-4 py-2 text-xs font-semibold rounded bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors"
               >
-                Done
+                Done & View Directory
               </button>
             </div>
           </div>

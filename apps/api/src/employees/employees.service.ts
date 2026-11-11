@@ -12,7 +12,7 @@ import { CreateEmployeeDto } from './dto/create-employee.dto.js';
 import { UpdateEmployeeDto } from './dto/update-employee.dto.js';
 import { SetRolesDto } from './dto/set-roles.dto.js';
 import { UpdateProfileDto } from './dto/update-profile.dto.js';
-import { EmployeeStatus, Role } from '@prisma/client';
+import { EmployeeStatus, Role, Prisma } from '@prisma/client';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 
@@ -147,106 +147,133 @@ export class EmployeesService {
 
     const email = dto.email.trim().toLowerCase();
 
-    return this.prisma.withTenant(user.tenantId, async (tx) => {
-      // Check duplicate email
-      const existingEmail = await tx.user.findFirst({
-        where: { email },
-      });
-      if (existingEmail) {
-        throw new ConflictException('Email is already in use');
-      }
+    // Check duplicate email across any tenant (via security definer loginLookup)
+    const globalExisting = await this.prisma.loginLookup(email);
+    if (globalExisting) {
+      throw new ConflictException('Email is already in use');
+    }
 
-      // Check duplicate employeeNo
-      const existingNo = await tx.employee.findFirst({
-        where: { tenantId: user.tenantId, employeeNo: dto.employeeNo.trim() },
-      });
-      if (existingNo) {
-        throw new ConflictException('Employee number is already in use');
-      }
-
-      // Validate department if provided
-      const departmentId = dto.departmentId && dto.departmentId.trim() ? dto.departmentId.trim() : null;
-      if (departmentId) {
-        const dept = await tx.department.findFirst({
-          where: { id: departmentId, tenantId: user.tenantId },
+    try {
+      return await this.prisma.withTenant(user.tenantId, async (tx) => {
+        // Check duplicate email within tenant
+        const existingEmail = await tx.user.findFirst({
+          where: { email },
         });
-        if (!dept) {
-          throw new BadRequestException('Selected department does not exist');
+        if (existingEmail) {
+          throw new ConflictException('Email is already in use');
+        }
+
+        // Check duplicate employeeNo
+        const existingNo = await tx.employee.findFirst({
+          where: { tenantId: user.tenantId, employeeNo: dto.employeeNo.trim() },
+        });
+        if (existingNo) {
+          throw new ConflictException('Employee number is already in use');
+        }
+
+        // Validate department if provided
+        const departmentId = dto.departmentId && dto.departmentId.trim() ? dto.departmentId.trim() : null;
+        if (departmentId) {
+          const dept = await tx.department.findFirst({
+            where: { id: departmentId, tenantId: user.tenantId },
+          });
+          if (!dept) {
+            throw new BadRequestException('Selected department does not exist');
+          }
+        }
+
+        // Validate manager if provided
+        const managerId = dto.managerId && dto.managerId.trim() ? dto.managerId.trim() : null;
+        if (managerId) {
+          const mgr = await tx.employee.findFirst({
+            where: { id: managerId, tenantId: user.tenantId },
+          });
+          if (!mgr) {
+            throw new BadRequestException('Selected manager does not exist');
+          }
+        }
+
+        // Validate hireDate
+        const cleanHireDate = dto.hireDate.includes('T') ? dto.hireDate.split('T')[0] : dto.hireDate.replace(/\//g, '-');
+        const parsedHireDate = new Date(`${cleanHireDate}T00:00:00.000Z`);
+        if (isNaN(parsedHireDate.getTime())) {
+          throw new BadRequestException('hireDate must be a valid date string (YYYY-MM-DD)');
+        }
+
+        const temporaryPassword = crypto.randomBytes(9).toString('base64url');
+        const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+
+        const newUser = await tx.user.create({
+          data: {
+            tenantId: user.tenantId,
+            email,
+            passwordHash,
+            roles,
+            active: true,
+          },
+        });
+
+        const newEmployee = await tx.employee.create({
+          data: {
+            tenantId: user.tenantId,
+            userId: newUser.id,
+            employeeNo: dto.employeeNo.trim(),
+            firstName: dto.firstName.trim(),
+            lastName: dto.lastName.trim(),
+            departmentId,
+            position: dto.position.trim(),
+            managerId,
+            hireDate: parsedHireDate,
+            gender: dto.gender,
+            maritalStatus: dto.maritalStatus,
+            status: 'ACTIVE',
+          },
+          include: {
+            user: { select: { email: true, roles: true, active: true } },
+            department: true,
+            manager: true,
+          },
+        });
+
+        await this.auditService.record(tx, {
+          tenantId: user.tenantId,
+          actorId: user.userId,
+          action: 'create',
+          entity: 'Employee',
+          entityId: newEmployee.id,
+          after: {
+            id: newEmployee.id,
+            employeeNo: newEmployee.employeeNo,
+            email: newUser.email,
+            position: newEmployee.position,
+            roles: newUser.roles,
+          },
+        });
+
+        return {
+          employee: newEmployee,
+          temporaryPassword,
+        };
+      });
+    } catch (err: any) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError) {
+        if (err.code === 'P2002') {
+          const target = (err.meta?.target as string[]) || [];
+          const targetStr = Array.isArray(target) ? target.join(',') : String(target);
+          if (targetStr.includes('email') || targetStr.includes('User_email_key')) {
+            throw new ConflictException('Email is already in use');
+          }
+          if (targetStr.includes('employeeNo')) {
+            throw new ConflictException('Employee number is already in use');
+          }
+          throw new ConflictException('A user or employee with these details already exists');
+        }
+        if (err.code === 'P2003') {
+          throw new BadRequestException('Selected department or manager does not exist');
         }
       }
-
-      // Validate manager if provided
-      const managerId = dto.managerId && dto.managerId.trim() ? dto.managerId.trim() : null;
-      if (managerId) {
-        const mgr = await tx.employee.findFirst({
-          where: { id: managerId, tenantId: user.tenantId },
-        });
-        if (!mgr) {
-          throw new BadRequestException('Selected manager does not exist');
-        }
-      }
-
-      // Validate hireDate
-      const parsedHireDate = new Date(dto.hireDate);
-      if (isNaN(parsedHireDate.getTime())) {
-        throw new BadRequestException('hireDate must be a valid date string (YYYY-MM-DD)');
-      }
-
-      const temporaryPassword = crypto.randomBytes(9).toString('base64url');
-      const passwordHash = await bcrypt.hash(temporaryPassword, 10);
-
-      const newUser = await tx.user.create({
-        data: {
-          tenantId: user.tenantId,
-          email,
-          passwordHash,
-          roles,
-          active: true,
-        },
-      });
-
-      const newEmployee = await tx.employee.create({
-        data: {
-          tenantId: user.tenantId,
-          userId: newUser.id,
-          employeeNo: dto.employeeNo.trim(),
-          firstName: dto.firstName.trim(),
-          lastName: dto.lastName.trim(),
-          departmentId,
-          position: dto.position.trim(),
-          managerId,
-          hireDate: parsedHireDate,
-          gender: dto.gender,
-          maritalStatus: dto.maritalStatus,
-          status: 'ACTIVE',
-        },
-        include: {
-          user: { select: { email: true, roles: true, active: true } },
-          department: true,
-          manager: true,
-        },
-      });
-
-      await this.auditService.record(tx, {
-        tenantId: user.tenantId,
-        actorId: user.userId,
-        action: 'create',
-        entity: 'Employee',
-        entityId: newEmployee.id,
-        after: {
-          id: newEmployee.id,
-          employeeNo: newEmployee.employeeNo,
-          email: newUser.email,
-          position: newEmployee.position,
-          roles: newUser.roles,
-        },
-      });
-
-      return {
-        employee: newEmployee,
-        temporaryPassword,
-      };
-    });
+      throw err;
+    }
   }
 
   async updateEmployee(user: AuthUser, id: string, dto: UpdateEmployeeDto) {
