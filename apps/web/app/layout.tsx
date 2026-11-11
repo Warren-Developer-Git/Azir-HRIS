@@ -15,8 +15,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "HRMS - Human Resources Management System",
-  description: "Enterprise multi-tenant HR management system",
+  title: "Azir Company - Human Resources Management System",
+  description: "Azir Company Global Tech enterprise HR management portal",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/company-logo-mark.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/company-logo-mark.svg",
+    apple: "/company-logo-mark.svg",
+  },
 };
 
 export default function RootLayout({

@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { Shield, ArrowRight, Loader2, KeyRound } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { CompanyLogo } from '@/components/company-logo';
 
 export default function LoginPage() {
   const { login, user, isLoading } = useAuth();
@@ -56,14 +57,14 @@ export default function LoginPage() {
         <ThemeToggle />
       </div>
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 mb-4 shadow-sm">
-          <Shield className="w-6 h-6" />
+        <div className="flex justify-center mb-4">
+          <CompanyLogo variant="full" className="h-16 w-auto max-w-[280px]" alt="Azir Company Global Tech" />
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">
-          HR Management System
+          Azir Company Global Tech
         </h1>
         <p className="mt-1 text-sm text-neutral-500">
-          Sign in to access your organization portal
+          Sign in to access your employee & management portal
         </p>
       </div>
 

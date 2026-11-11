@@ -134,7 +134,7 @@ export default function NewEmployeePage() {
   const handleCopyAll = () => {
     if (!createdCreds) return;
     const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-    const text = `HRMS Portal Login Credentials:\nEmployee: ${createdCreds.name} (${createdCreds.employeeNo})\nWork Email: ${createdCreds.email}\nTemporary Password: ${createdCreds.password}\nLogin URL: ${origin}/login`;
+    const text = `Azir Company Portal Login Credentials:\nEmployee: ${createdCreds.name} (${createdCreds.employeeNo})\nWork Email: ${createdCreds.email}\nTemporary Password: ${createdCreds.password}\nLogin URL: ${origin}/login`;
     navigator.clipboard.writeText(text);
     setCopiedField('all');
     setTimeout(() => setCopiedField(null), 2000);
