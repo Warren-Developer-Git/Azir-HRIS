@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { UserAvatar } from '@/components/user-avatar';
 import {
   User,
   Building,
@@ -19,6 +20,9 @@ import {
   Eye,
   EyeOff,
   ShieldCheck,
+  Camera,
+  Upload,
+  Trash2,
 } from 'lucide-react';
 
 interface MyProfile {
@@ -32,6 +36,7 @@ interface MyProfile {
   maritalStatus: string;
   phone: string | null;
   address: string | null;
+  avatarUrl?: string | null;
   status: string;
   user: {
     email: string;
@@ -52,6 +57,11 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<MyProfile | null>(null);
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -65,6 +75,7 @@ export default function ProfilePage() {
       setProfile(data);
       setPhone(data.phone || '');
       setAddress(data.address || '');
+      setAvatarUrl(data.avatarUrl || null);
     } catch (err: any) {
       setError(err instanceof ApiError ? err.message : 'Failed to load profile');
     } finally {
@@ -75,6 +86,86 @@ export default function ProfilePage() {
   useEffect(() => {
     fetchProfile();
   }, []);
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setPhotoError('Please select a valid image file (JPEG, PNG, WEBP).');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setPhotoError('Image must be under 5MB.');
+      return;
+    }
+
+    setPhotoError(null);
+    setIsUploadingPhoto(true);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = async () => {
+        // Resize to 400x400 square crop via canvas
+        const canvas = document.createElement('canvas');
+        const size = 400;
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          setIsUploadingPhoto(false);
+          return;
+        }
+
+        // Center crop
+        const minDim = Math.min(img.width, img.height);
+        const sx = (img.width - minDim) / 2;
+        const sy = (img.height - minDim) / 2;
+        ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+        try {
+          const updated = await api<MyProfile>('/me/profile', {
+            method: 'PATCH',
+            body: JSON.stringify({ avatarUrl: dataUrl }),
+          });
+          setProfile(updated);
+          setAvatarUrl(updated.avatarUrl || null);
+          setSuccess(true);
+          setTimeout(() => setSuccess(false), 3000);
+        } catch (err: any) {
+          setPhotoError(err instanceof ApiError ? err.message : 'Failed to save profile picture');
+        } finally {
+          setIsUploadingPhoto(false);
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleRemovePhoto = async () => {
+    setPhotoError(null);
+    try {
+      setIsUploadingPhoto(true);
+      const updated = await api<MyProfile>('/me/profile', {
+        method: 'PATCH',
+        body: JSON.stringify({ avatarUrl: null }),
+      });
+      setProfile(updated);
+      setAvatarUrl(null);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err: any) {
+      setPhotoError(err instanceof ApiError ? err.message : 'Failed to remove profile picture');
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -214,11 +305,36 @@ export default function ProfilePage() {
         <div className="space-y-6">
           {/* Identity Card */}
           <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full border border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-lg font-bold">
-                {profile.firstName[0]}
-                {profile.lastName[0]}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="relative group shrink-0">
+                <UserAvatar
+                  src={avatarUrl}
+                  gender={profile.gender}
+                  alt={`${profile.firstName} ${profile.lastName}`}
+                  size="xl"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploadingPhoto}
+                  className="absolute bottom-0 right-0 p-1.5 rounded-full bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-md hover:scale-105 transition-all disabled:opacity-50"
+                  title="Upload profile picture"
+                >
+                  {isUploadingPhoto ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Camera className="w-3.5 h-3.5" />
+                  )}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png, image/jpeg, image/webp"
+                  className="hidden"
+                  onChange={handlePhotoSelect}
+                />
               </div>
+
               <div>
                 <h2 className="text-lg font-bold text-neutral-900 dark:text-white">
                   {profile.firstName} {profile.lastName}
@@ -236,6 +352,37 @@ export default function ProfilePage() {
                     </span>
                   ))}
                 </div>
+
+                {/* Upload & Remove controls */}
+                <div className="flex items-center gap-2 mt-3">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingPhoto}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 transition-colors"
+                  >
+                    <Upload className="w-3 h-3" />
+                    <span>{avatarUrl ? 'Change Photo' : 'Upload Photo'}</span>
+                  </button>
+
+                  {avatarUrl && (
+                    <button
+                      type="button"
+                      onClick={handleRemovePhoto}
+                      disabled={isUploadingPhoto}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Remove</span>
+                    </button>
+                  )}
+                </div>
+
+                {photoError && (
+                  <div className="text-xs text-red-600 dark:text-red-400 mt-2 font-medium">
+                    {photoError}
+                  </div>
+                )}
               </div>
             </div>
 

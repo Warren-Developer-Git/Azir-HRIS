@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '../lib/auth-context';
 import { ThemeToggle } from './theme-toggle';
 import { NotificationBell } from './notification-bell';
+import { UserAvatar } from './user-avatar';
 import {
   LayoutDashboard,
   CalendarDays,
@@ -154,8 +155,14 @@ export function AppSidebar() {
 
         {/* User footer */}
         <div className="p-4 border-t border-neutral-100 dark:border-neutral-900">
-          <div className="flex items-center justify-between mb-3 px-1">
-            <div className="min-w-0">
+          <div className="flex items-center gap-3 mb-3 px-1">
+            <UserAvatar
+              src={user?.avatarUrl}
+              gender={user?.gender}
+              alt={user?.name || 'User avatar'}
+              size="md"
+            />
+            <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold truncate">{user?.name}</p>
               <p className="text-xs text-neutral-400 truncate">{user?.email}</p>
               <div className="flex gap-1 mt-1">

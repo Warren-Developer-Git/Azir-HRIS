@@ -120,6 +120,7 @@ model Employee {
   maritalStatus MaritalStatus
   phone         String?
   address       String?
+  avatarUrl     String?
   status        EmployeeStatus @default(ACTIVE)
 
   tenant       Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)

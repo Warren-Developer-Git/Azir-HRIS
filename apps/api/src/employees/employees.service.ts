@@ -513,6 +513,7 @@ export class EmployeesService {
       const data: any = {};
       if (dto.phone !== undefined) data.phone = dto.phone?.trim() || null;
       if (dto.address !== undefined) data.address = dto.address?.trim() || null;
+      if (dto.avatarUrl !== undefined) data.avatarUrl = dto.avatarUrl?.trim() || null;
 
       const updated = await tx.employee.update({
         where: { id: user.employeeId },
@@ -530,8 +531,8 @@ export class EmployeesService {
         action: 'updateProfile',
         entity: 'Employee',
         entityId: user.employeeId,
-        before: { phone: existing.phone, address: existing.address },
-        after: { phone: updated.phone, address: updated.address },
+        before: { phone: existing.phone, address: existing.address, hasAvatar: !!existing.avatarUrl },
+        after: { phone: updated.phone, address: updated.address, hasAvatar: !!updated.avatarUrl },
       });
 
       return updated;

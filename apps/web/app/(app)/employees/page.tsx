@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { UserAvatar } from '@/components/user-avatar';
 import {
   Users,
   Search,
@@ -21,6 +22,8 @@ interface EmployeeItem {
   firstName: string;
   lastName: string;
   position: string;
+  gender?: string;
+  avatarUrl?: string | null;
   status: 'ACTIVE' | 'INACTIVE';
   hireDate: string;
   user?: {
@@ -202,13 +205,23 @@ export default function EmployeesPage() {
                     className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
                   >
                     <td className="px-5 py-4 whitespace-nowrap">
-                      <div className="font-semibold text-neutral-900 dark:text-neutral-100">
-                        {emp.firstName} {emp.lastName}
-                      </div>
-                      <div className="text-xs text-neutral-500 flex items-center gap-1.5 mt-0.5">
-                        <span className="font-mono">{emp.employeeNo}</span>
-                        <span>•</span>
-                        <span>{emp.user?.email}</span>
+                      <div className="flex items-center gap-3">
+                        <UserAvatar
+                          src={emp.avatarUrl}
+                          gender={emp.gender}
+                          alt={`${emp.firstName} ${emp.lastName}`}
+                          size="sm"
+                        />
+                        <div>
+                          <div className="font-semibold text-neutral-900 dark:text-neutral-100">
+                            {emp.firstName} {emp.lastName}
+                          </div>
+                          <div className="text-xs text-neutral-500 flex items-center gap-1.5 mt-0.5">
+                            <span className="font-mono">{emp.employeeNo}</span>
+                            <span>•</span>
+                            <span>{emp.user?.email}</span>
+                          </div>
+                        </div>
                       </div>
                     </td>
 

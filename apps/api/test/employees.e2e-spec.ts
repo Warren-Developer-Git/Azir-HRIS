@@ -250,18 +250,29 @@ describe('Employees API (e2e)', () => {
     expect(loginRes.status).toBe(200);
   });
 
-  it('GET /me/profile and PATCH /me/profile allows updating personal phone and address', async () => {
+  it('GET /me/profile and PATCH /me/profile allows updating personal phone, address, and profile picture avatarUrl', async () => {
     const updateRes = await request(app.getHttpServer())
       .patch('/me/profile')
       .set('Authorization', `Bearer ${hrToken}`)
       .send({
         phone: '+63 917 123 4567',
         address: 'Makati City, Metro Manila',
+        avatarUrl: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD',
       });
 
     expect(updateRes.status).toBe(200);
     expect(updateRes.body.phone).toBe('+63 917 123 4567');
     expect(updateRes.body.address).toBe('Makati City, Metro Manila');
+    expect(updateRes.body.avatarUrl).toBe('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD');
+
+    // Remove avatar
+    const removeAvatarRes = await request(app.getHttpServer())
+      .patch('/me/profile')
+      .set('Authorization', `Bearer ${hrToken}`)
+      .send({ avatarUrl: null });
+
+    expect(removeAvatarRes.status).toBe(200);
+    expect(removeAvatarRes.body.avatarUrl).toBeNull();
 
     // Reject non-whitelisted fields on /me/profile
     const invalidRes = await request(app.getHttpServer())

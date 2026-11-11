@@ -103,6 +103,8 @@ export class AuthService {
         employeeId: fullUser.employee.id,
         name,
         tenantName: fullUser.tenant.name,
+        avatarUrl: fullUser.employee.avatarUrl,
+        gender: fullUser.employee.gender,
       },
     };
   }
@@ -175,6 +177,8 @@ export class AuthService {
         employeeId: fullUser.employee.id,
         name,
         tenantName: fullUser.tenant.name,
+        avatarUrl: fullUser.employee.avatarUrl,
+        gender: fullUser.employee.gender,
       },
     };
   }
@@ -211,6 +215,8 @@ export class AuthService {
       employeeId: user.employee.id,
       name,
       tenantName: user.tenant.name,
+      avatarUrl: user.employee.avatarUrl,
+      gender: user.employee.gender,
     };
   }
 

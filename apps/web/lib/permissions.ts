@@ -21,6 +21,8 @@ export interface UserSession {
   employeeId: string;
   name: string;
   tenantName: string;
+  avatarUrl?: string | null;
+  gender?: string | null;
 }
 
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
