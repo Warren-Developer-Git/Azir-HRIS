@@ -113,7 +113,7 @@ export class DocumentsService {
           tenantId: user.tenantId,
           recipientUserIds: hrUserIds,
           message: `${employee.firstName} ${employee.lastName} requested ${docType.name} (Due in 3 working days).`,
-          link: `/documents/manage?id=${created.id}`,
+          link: `/documents?tab=awaiting&id=${created.id}`,
         });
       }
 

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { CompanyLogo } from '@/components/company-logo';
@@ -63,13 +64,27 @@ interface DocumentRequestItem {
   issuedDocument?: IssuedDocument | null;
 }
 
-export default function DocumentsPage() {
+function DocumentsContent() {
   const { user, can } = useAuth();
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get('tab') === 'awaiting' ? 'awaiting' : 'mine';
+  const targetId = searchParams.get('id');
+
   const [types, setTypes] = useState<DocumentType[]>([]);
   const [requests, setRequests] = useState<DocumentRequestItem[]>([]);
-  const [activeTab, setActiveTab] = useState<'mine' | 'awaiting'>('mine');
+  const [activeTab, setActiveTab] = useState<'mine' | 'awaiting'>(initialTab);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Sync tab with URL search parameter if changed
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'awaiting') {
+      setActiveTab('awaiting');
+    } else if (tabParam === 'mine') {
+      setActiveTab('mine');
+    }
+  }, [searchParams]);
 
   // Request Form Modal
   const [showRequestModal, setShowRequestModal] = useState(false);
@@ -128,6 +143,21 @@ export default function DocumentsPage() {
   useEffect(() => {
     fetchRequests();
   }, [activeTab]);
+
+  // If a notification links directly to a document request ID, open its modal or preview
+  useEffect(() => {
+    if (!targetId || requests.length === 0) return;
+    const match = requests.find((r) => r.id === targetId);
+    if (match) {
+      if (isHrApprover && match.status === 'PENDING_APPROVAL' && activeTab === 'awaiting') {
+        setDecisionItem(match);
+        setDecisionType('APPROVED');
+        setDecisionComment('');
+      } else {
+        handleOpenPreview(match);
+      }
+    }
+  }, [targetId, requests, isHrApprover, activeTab]);
 
   const handleOpenPreview = async (item: DocumentRequestItem) => {
     setPreviewItem(item);
@@ -845,5 +875,20 @@ export default function DocumentsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function DocumentsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-12 text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-neutral-400 mx-auto mb-2" />
+          <p className="text-sm font-medium text-neutral-500">Loading documents...</p>
+        </div>
+      }
+    >
+      <DocumentsContent />
+    </Suspense>
   );
 }

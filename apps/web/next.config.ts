@@ -21,6 +21,11 @@ const nextConfig: NextConfig = {
         destination: "/audit-logs",
         permanent: false,
       },
+      {
+        source: "/documents/manage",
+        destination: "/documents?tab=awaiting",
+        permanent: false,
+      },
     ];
   },
 };
