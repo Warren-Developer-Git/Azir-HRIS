@@ -70,10 +70,13 @@ input[type="month"]::-webkit-calendar-picker-indicator:hover {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 12mm 15mm;
+    margin: 0mm !important;
   }
 
+  html,
   body {
+    margin: 0 !important;
+    padding: 0 !important;
     background: #ffffff !important;
     color: #171717 !important;
     -webkit-print-color-adjust: exact !important;
@@ -110,11 +113,12 @@ input[type="month"]::-webkit-calendar-picker-indicator:hover {
   }
 
   .printable-certificate {
-    padding: 0 !important;
+    padding: 15mm 18mm !important;
     border: none !important;
     background: white !important;
     color: black !important;
     width: 100% !important;
+    box-sizing: border-box !important;
     page-break-inside: avoid !important;
   }
 

@@ -249,15 +249,15 @@ function DocumentsContent() {
           <style>
             @page {
               size: A4 portrait;
-              margin: 12mm 15mm;
+              margin: 0mm !important;
             }
             * {
               box-sizing: border-box;
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             }
-            body {
-              margin: 0;
-              padding: 0;
+            html, body {
+              margin: 0 !important;
+              padding: 0 !important;
               color: #171717;
               background: #ffffff;
               -webkit-print-color-adjust: exact;
@@ -366,7 +366,7 @@ function DocumentsContent() {
           </style>
         </head>
         <body>
-          <div style="padding: 10px 15px;">
+          <div style="padding: 15mm 18mm; box-sizing: border-box; width: 100%;">
             ${html}
           </div>
         </body>
@@ -407,11 +407,14 @@ function DocumentsContent() {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${docTitle}</title>
   <style>
-    @page { size: A4 portrait; margin: 12mm 15mm; }
+    @page { size: A4 portrait; margin: 0mm !important; }
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
     body { margin: 0; padding: 40px 20px; background: #e5e7eb; color: #171717; display: flex; justify-content: center; }
     .sheet-wrapper { background: #ffffff; width: 100%; max-width: 800px; padding: 48px; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
-    @media print { body { background: white; padding: 0; } .sheet-wrapper { border: none; box-shadow: none; padding: 0; max-width: 100%; } }
+    @media print {
+      html, body { background: white !important; margin: 0 !important; padding: 0 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      .sheet-wrapper { border: none !important; box-shadow: none !important; padding: 15mm 18mm !important; margin: 0 !important; max-width: 100% !important; width: 100% !important; box-sizing: border-box !important; }
+    }
     .company-logo-img { height: 38px !important; max-height: 38px !important; width: auto !important; display: inline-block !important; vertical-align: middle !important; }
     .hr-sig-img { height: 60px !important; max-height: 60px !important; width: auto !important; display: block !important; }
     .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
