@@ -8,6 +8,7 @@ import { NotificationsModule } from './notifications/notifications.module.js';
 import { EmployeesModule } from './employees/employees.module.js';
 import { AuditModule } from './audit/audit.module.js';
 import { SettingsModule } from './settings/settings.module.js';
+import { DashboardModule } from './dashboard/dashboard.module.js';
 import { JwtAuthGuard } from './auth/jwt-auth.guard.js';
 import { PermissionsGuard } from './auth/permissions.guard.js';
 
@@ -20,6 +21,7 @@ import { PermissionsGuard } from './auth/permissions.guard.js';
     EmployeesModule,
     AuditModule,
     SettingsModule,
+    DashboardModule,
   ],
   controllers: [HealthController],
   providers: [
