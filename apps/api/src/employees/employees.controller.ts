@@ -16,11 +16,16 @@ import type { AuthUser } from '../auth/permissions.js';
 import { CreateEmployeeDto } from './dto/create-employee.dto.js';
 import { UpdateEmployeeDto } from './dto/update-employee.dto.js';
 import { SetRolesDto } from './dto/set-roles.dto.js';
+import { CreateBalanceAdjustmentDto } from './dto/create-balance-adjustment.dto.js';
+import { BalancesService } from '../leave/balances.service.js';
 import { EmployeeStatus } from '@prisma/client';
 
 @Controller('employees')
 export class EmployeesController {
-  constructor(private readonly employeesService: EmployeesService) {}
+  constructor(
+    private readonly employeesService: EmployeesService,
+    private readonly balancesService: BalancesService,
+  ) {}
 
   @Get()
   async listEmployees(
@@ -98,5 +103,26 @@ export class EmployeesController {
     @Param('id') id: string,
   ) {
     return this.employeesService.resetPassword(user, id);
+  }
+
+  @Get(':id/balances')
+  async getEmployeeBalances(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Query('year') yearStr?: string,
+  ) {
+    const year = yearStr ? parseInt(yearStr, 10) : undefined;
+    return this.balancesService.getEmployeeBalances(user, id, year);
+  }
+
+  @RequirePermission('balance.adjust')
+  @Post(':id/balance-adjustments')
+  @HttpCode(HttpStatus.CREATED)
+  async adjustBalance(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: CreateBalanceAdjustmentDto,
+  ) {
+    return this.balancesService.adjustBalance(user, id, dto);
   }
 }

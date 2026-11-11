@@ -17,6 +17,7 @@ import type { AuthUser } from '../auth/permissions.js';
 import { CreateLeaveRequestDto } from './dto/create-leave-request.dto.js';
 import { UpdateLeaveRequestDto } from './dto/update-leave-request.dto.js';
 import { DecideLeaveRequestDto } from './dto/decide-leave-request.dto.js';
+import { GrantBalancesDto } from './dto/grant-balances.dto.js';
 
 @Controller('leave')
 export class LeaveRequestsController {
@@ -25,6 +26,16 @@ export class LeaveRequestsController {
     private readonly balancesService: BalancesService,
     private readonly prisma: PrismaService,
   ) {}
+
+  @RequirePermission('balance.adjust')
+  @Post('balances/grant')
+  @HttpCode(HttpStatus.CREATED)
+  async grantBalances(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: GrantBalancesDto,
+  ) {
+    return this.balancesService.grantYearlyBalances(user, dto.year);
+  }
 
   @Get('balances')
   async getBalances(

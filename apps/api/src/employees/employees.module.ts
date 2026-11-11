@@ -3,8 +3,10 @@ import { EmployeesController } from './employees.controller.js';
 import { ProfileController } from './profile.controller.js';
 import { EmployeesService } from './employees.service.js';
 import { AuditService } from '../audit/audit.service.js';
+import { LeaveModule } from '../leave/leave.module.js';
 
 @Module({
+  imports: [LeaveModule],
   controllers: [EmployeesController, ProfileController],
   providers: [EmployeesService, AuditService],
   exports: [EmployeesService],
