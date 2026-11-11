@@ -316,9 +316,43 @@ function DocumentsContent() {
             .space-y-4 > * + * { margin-top: 14px; }
             .flex { display: flex; }
             .flex-col { flex-direction: column; }
-            .justify-between { justify-content: space-between; }
-            .items-center { align-items: center; }
-            .items-end { align-items: flex-end; }
+            .letterhead-brand {
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              gap: 10px !important;
+              margin: 0 auto !important;
+              text-align: center !important;
+              width: 100% !important;
+            }
+            .justify-center { justify-content: center !important; }
+            .justify-between { justify-content: space-between !important; }
+            .justify-start { justify-content: flex-start !important; }
+            .justify-end { justify-content: flex-end !important; }
+            .items-center { align-items: center !important; }
+            .items-end { align-items: flex-end !important; }
+            .items-start { align-items: flex-start !important; }
+            .mx-auto { margin-left: auto !important; margin-right: auto !important; }
+            .gap-1 { gap: 4px !important; }
+            .gap-2 { gap: 8px !important; }
+            .gap-2\.5, [class*="gap-2.5"] { gap: 10px !important; }
+            .gap-3 { gap: 12px !important; }
+            .gap-4 { gap: 16px !important; }
+            .h-14 { height: 56px !important; }
+            .-mb-3 { margin-bottom: -12px !important; }
+            .pl-4 { padding-left: 16px !important; }
+            .absolute { position: absolute !important; }
+            .inset-0 { top: 0 !important; right: 0 !important; bottom: 0 !important; left: 0 !important; }
+            .select-none { user-select: none !important; }
+            .pointer-events-none { pointer-events: none !important; }
+            .leading-relaxed { line-height: 1.625 !important; }
+            .text-left { text-align: left !important; }
+            .text-center { text-align: center !important; }
+            .text-right { text-align: right !important; }
+            .border-neutral-900 { border-color: #171717 !important; }
+            .border-neutral-300 { border-color: #d4d4d4 !important; }
+            .border-neutral-200 { border-color: #e5e5e5 !important; }
+            .divide-y > * + * { border-top: 1px solid #e5e5e5 !important; }
             .relative { position: relative; }
             table { width: 100%; border-collapse: collapse; }
             th, td { padding: 6px 8px; font-size: 12px; }
@@ -420,9 +454,43 @@ function DocumentsContent() {
     .space-y-4 > * + * { margin-top: 14px; }
     .flex { display: flex; }
     .flex-col { flex-direction: column; }
-    .justify-between { justify-content: space-between; }
-    .items-center { align-items: center; }
-    .items-end { align-items: flex-end; }
+    .letterhead-brand {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 10px !important;
+      margin: 0 auto !important;
+      text-align: center !important;
+      width: 100% !important;
+    }
+    .justify-center { justify-content: center !important; }
+    .justify-between { justify-content: space-between !important; }
+    .justify-start { justify-content: flex-start !important; }
+    .justify-end { justify-content: flex-end !important; }
+    .items-center { align-items: center !important; }
+    .items-end { align-items: flex-end !important; }
+    .items-start { align-items: flex-start !important; }
+    .mx-auto { margin-left: auto !important; margin-right: auto !important; }
+    .gap-1 { gap: 4px !important; }
+    .gap-2 { gap: 8px !important; }
+    .gap-2\.5, [class*="gap-2.5"] { gap: 10px !important; }
+    .gap-3 { gap: 12px !important; }
+    .gap-4 { gap: 16px !important; }
+    .h-14 { height: 56px !important; }
+    .-mb-3 { margin-bottom: -12px !important; }
+    .pl-4 { padding-left: 16px !important; }
+    .absolute { position: absolute !important; }
+    .inset-0 { top: 0 !important; right: 0 !important; bottom: 0 !important; left: 0 !important; }
+    .select-none { user-select: none !important; }
+    .pointer-events-none { pointer-events: none !important; }
+    .leading-relaxed { line-height: 1.625 !important; }
+    .text-left { text-align: left !important; }
+    .text-center { text-align: center !important; }
+    .text-right { text-align: right !important; }
+    .border-neutral-900 { border-color: #171717 !important; }
+    .border-neutral-300 { border-color: #d4d4d4 !important; }
+    .border-neutral-200 { border-color: #e5e5e5 !important; }
+    .divide-y > * + * { border-top: 1px solid #e5e5e5 !important; }
     .relative { position: relative; }
     table { width: 100%; border-collapse: collapse; }
     th, td { padding: 6px 8px; font-size: 12px; }
@@ -1043,22 +1111,55 @@ function DocumentsContent() {
             )}
 
             {/* Letterhead */}
-            <div className="text-center pb-6 border-b-2 border-neutral-900 space-y-1">
-              <div className="flex items-center justify-center gap-2.5">
+            <div className="text-center pb-6 border-b-2 border-neutral-900 space-y-1" style={{ textAlign: 'center', width: '100%' }}>
+              <div
+                className="letterhead-brand flex items-center justify-center gap-2.5"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                  margin: '0 auto',
+                  textAlign: 'center',
+                  width: '100%',
+                }}
+              >
                 <img
                   src="/company-logo-mark.svg"
                   alt="Azir Company Logo"
                   className="company-logo-img object-contain select-none"
-                  style={{ height: '38px', maxHeight: '38px', width: 'auto', display: 'inline-block', verticalAlign: 'middle' }}
+                  style={{
+                    height: '38px',
+                    maxHeight: '38px',
+                    width: 'auto',
+                    display: 'inline-block',
+                    verticalAlign: 'middle',
+                    flexShrink: 0,
+                  }}
                 />
-                <span className="font-black text-xl tracking-tight text-neutral-900 uppercase">
+                <span
+                  className="font-black text-xl tracking-tight text-neutral-900 uppercase"
+                  style={{
+                    display: 'inline-block',
+                    verticalAlign: 'middle',
+                    lineHeight: '1.2',
+                    fontWeight: 900,
+                    letterSpacing: '-0.025em',
+                  }}
+                >
                   Azir Company Global Tech
                 </span>
               </div>
-              <p className="text-xs text-neutral-600 font-medium">
+              <p
+                className="text-xs text-neutral-600 font-medium"
+                style={{ textAlign: 'center', margin: '4px 0 0 0' }}
+              >
                 Human Resources Administration & Enterprise People Operations
               </p>
-              <p className="text-[10px] text-neutral-500">
+              <p
+                className="text-[10px] text-neutral-500"
+                style={{ textAlign: 'center', margin: '2px 0 0 0' }}
+              >
                 Manila, Philippines • inquiries@azircompany.test • www.azircompany.test
               </p>
             </div>
