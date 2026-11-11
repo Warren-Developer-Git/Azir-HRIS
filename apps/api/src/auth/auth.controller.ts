@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 import { LoginDto } from './dto/login.dto.js';
+import { ChangePasswordDto } from './dto/change-password.dto.js';
 import { Public, CurrentUser } from './decorators.js';
 import type { Request, Response } from 'express';
 import type { AuthUser } from './permissions.js';
@@ -49,5 +50,14 @@ export class AuthController {
   @Get('me')
   async getMe(@CurrentUser() user: AuthUser) {
     return this.authService.getMe(user.userId, user.tenantId);
+  }
+
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  async changePassword(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    return this.authService.changePassword(user, dto);
   }
 }

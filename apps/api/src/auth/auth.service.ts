@@ -1,10 +1,14 @@
 import {
   Injectable,
   UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { AuditService } from '../audit/audit.service.js';
 import { LoginDto } from './dto/login.dto.js';
+import { ChangePasswordDto } from './dto/change-password.dto.js';
+import type { AuthUser } from './permissions.js';
 import bcrypt from 'bcryptjs';
 import type { Response } from 'express';
 
@@ -13,6 +17,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly auditService: AuditService,
   ) {}
 
   private get accessSecret(): string {
@@ -207,5 +212,50 @@ export class AuthService {
       name,
       tenantName: user.tenant.name,
     };
+  }
+
+  async changePassword(user: AuthUser, dto: ChangePasswordDto) {
+    if (!dto.oldPassword || !dto.newPassword) {
+      throw new BadRequestException('Current and new password are required');
+    }
+    if (dto.newPassword.length < 8) {
+      throw new BadRequestException('New password must be at least 8 characters long');
+    }
+    if (dto.newPassword === dto.oldPassword) {
+      throw new BadRequestException('New password cannot be the same as your current password');
+    }
+
+    await this.prisma.withTenant(user.tenantId, async (tx) => {
+      const existingUser = await tx.user.findUnique({
+        where: { id: user.userId },
+      });
+
+      if (!existingUser || !existingUser.active) {
+        throw new UnauthorizedException('User not found or inactive');
+      }
+
+      const isValid = bcrypt.compareSync(dto.oldPassword, existingUser.passwordHash);
+      if (!isValid) {
+        throw new BadRequestException('Current password does not match');
+      }
+
+      const newPasswordHash = bcrypt.hashSync(dto.newPassword, 10);
+      await tx.user.update({
+        where: { id: user.userId },
+        data: { passwordHash: newPasswordHash },
+      });
+
+      await this.auditService.record(tx, {
+        tenantId: user.tenantId,
+        actorId: user.userId,
+        action: 'changePassword',
+        entity: 'User',
+        entityId: user.userId,
+        before: { passwordChanged: false },
+        after: { passwordChanged: true, timestamp: new Date().toISOString() },
+      });
+    });
+
+    return { ok: true, message: 'Password updated successfully' };
   }
 }

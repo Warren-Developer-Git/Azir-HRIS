@@ -141,4 +141,89 @@ describe('Auth & Session (e2e)', () => {
       : cookies;
     expect(refreshCookie).toMatch(/Expires=|Max-Age=0/);
   });
+
+  describe('POST /auth/change-password', () => {
+    it('rejects unauthenticated requests with 401', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/auth/change-password')
+        .send({ oldPassword: 'Demo1234!', newPassword: 'NewPassword123!' });
+      expect(res.status).toBe(401);
+    });
+
+    it('rejects invalid or wrong current password with 400', async () => {
+      const loginRes = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'employee@acme.test', password: 'Demo1234!' });
+      const token = loginRes.body.accessToken;
+
+      const res = await request(app.getHttpServer())
+        .post('/auth/change-password')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ oldPassword: 'WrongPassword!', newPassword: 'NewPassword123!' });
+      expect(res.status).toBe(400);
+      expect(res.body.message).toMatch(/Current password does not match/);
+    });
+
+    it('rejects short new passwords (< 8 chars) with 400', async () => {
+      const loginRes = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'employee@acme.test', password: 'Demo1234!' });
+      const token = loginRes.body.accessToken;
+
+      const res = await request(app.getHttpServer())
+        .post('/auth/change-password')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ oldPassword: 'Demo1234!', newPassword: 'short' });
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects new password if identical to current password with 400', async () => {
+      const loginRes = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'employee@acme.test', password: 'Demo1234!' });
+      const token = loginRes.body.accessToken;
+
+      const res = await request(app.getHttpServer())
+        .post('/auth/change-password')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ oldPassword: 'Demo1234!', newPassword: 'Demo1234!' });
+      expect(res.status).toBe(400);
+      expect(res.body.message).toMatch(/same as your current password/);
+    });
+
+    it('successfully changes password, verifies old password fails login, and new password succeeds', async () => {
+      const loginRes = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'employee@acme.test', password: 'Demo1234!' });
+      const token = loginRes.body.accessToken;
+
+      // 1. Change password
+      const changeRes = await request(app.getHttpServer())
+        .post('/auth/change-password')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ oldPassword: 'Demo1234!', newPassword: 'UpdatedSecurePass2026!' });
+      expect(changeRes.status).toBe(200);
+      expect(changeRes.body.ok).toBe(true);
+
+      // 2. Old password should now fail login
+      const failLogin = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'employee@acme.test', password: 'Demo1234!' });
+      expect(failLogin.status).toBe(401);
+
+      // 3. New password should succeed login
+      const succeedLogin = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'employee@acme.test', password: 'UpdatedSecurePass2026!' });
+      expect(succeedLogin.status).toBe(200);
+      expect(succeedLogin.body).toHaveProperty('accessToken');
+
+      // 4. Restore original password so tests remain repeatable
+      const revertRes = await request(app.getHttpServer())
+        .post('/auth/change-password')
+        .set('Authorization', `Bearer ${succeedLogin.body.accessToken}`)
+        .send({ oldPassword: 'UpdatedSecurePass2026!', newPassword: 'Demo1234!' });
+      expect(revertRes.status).toBe(200);
+    });
+  });
 });
