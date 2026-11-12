@@ -610,6 +610,25 @@ function DocumentsContent() {
     });
   };
 
+  const getDepartmentName = (dept: any): string => {
+    if (!dept) return 'General';
+    if (typeof dept === 'string') return dept;
+    if (typeof dept === 'object' && dept.name) return String(dept.name);
+    return 'General';
+  };
+
+  const getReviewerName = (reviewedBy: any): string => {
+    if (!reviewedBy) return 'Human Resources Dept.';
+    if (typeof reviewedBy === 'string') return reviewedBy;
+    if (typeof reviewedBy === 'object') {
+      if (reviewedBy.firstName && reviewedBy.lastName) {
+        return `${reviewedBy.firstName} ${reviewedBy.lastName}`;
+      }
+      if (reviewedBy.firstName) return reviewedBy.firstName;
+    }
+    return 'Human Resources Dept.';
+  };
+
   const getSlaBadge = (dueAt: string, status: string) => {
     if (status !== 'PENDING_APPROVAL') return null;
     const now = new Date().getTime();
@@ -1192,14 +1211,14 @@ function DocumentsContent() {
 
               {previewItem.documentType.code === 'COE' && (
                 <p>
-                  This is to certify that <strong className="uppercase">{previewData?.employee?.firstName} {previewData?.employee?.lastName}</strong> (Employee No. <span className="font-mono">{previewData?.employee?.employeeNo}</span>) is currently employed with <strong>Azir Company Global Tech</strong> as <strong>{previewData?.employee?.position}</strong> in the <strong>{previewData?.employee?.department || 'General'}</strong> department, having commenced employment on <strong>{formatDate(previewData?.employee?.hireDate)}</strong>.
+                  This is to certify that <strong className="uppercase">{previewData?.employee?.firstName} {previewData?.employee?.lastName}</strong> (Employee No. <span className="font-mono">{previewData?.employee?.employeeNo}</span>) is currently employed with <strong>Azir Company Global Tech</strong> as <strong>{previewData?.employee?.position}</strong> in the <strong>{getDepartmentName(previewData?.employee?.department)}</strong> department, having commenced employment on <strong>{formatDate(previewData?.employee?.hireDate)}</strong>.
                 </p>
               )}
 
               {previewItem.documentType.code === 'COE_COMPENSATION' && (
                 <>
                   <p>
-                    This certifies that <strong className="uppercase">{previewData?.employee?.firstName} {previewData?.employee?.lastName}</strong> is an active employee of <strong>Azir Company Global Tech</strong> serving as <strong>{previewData?.employee?.position}</strong> since <strong>{formatDate(previewData?.employee?.hireDate)}</strong>.
+                    This certifies that <strong className="uppercase">{previewData?.employee?.firstName} {previewData?.employee?.lastName}</strong> is an active employee of <strong>Azir Company Global Tech</strong> serving as <strong>{previewData?.employee?.position}</strong> in the <strong>{getDepartmentName(previewData?.employee?.department)}</strong> department since <strong>{formatDate(previewData?.employee?.hireDate)}</strong>.
                   </p>
                   <div className="p-4 rounded border border-neutral-300 bg-neutral-50 space-y-2 text-xs">
                     <div className="font-bold text-neutral-900 border-b pb-1">COMPENSATION DETAILS:</div>
@@ -1300,9 +1319,7 @@ function DocumentsContent() {
                 )}
 
                 <div className="w-52 border-b border-neutral-900 pb-1 font-semibold text-xs text-neutral-900">
-                  {previewData?.reviewedBy
-                    ? `${previewData.reviewedBy.firstName} ${previewData.reviewedBy.lastName}`
-                    : 'Human Resources Dept.'}
+                  {getReviewerName(previewData?.reviewedBy)}
                 </div>
                 <div className="text-[11px] text-neutral-500">
                   People & Culture Division • Azir Company

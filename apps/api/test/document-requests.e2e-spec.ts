@@ -251,6 +251,37 @@ describe('Document Requests & Verification Flow (e2e)', () => {
     expect(approveRes.body.issuedDocument.snapshotData.payPeriod).toBe('October 16-31, 2026');
   });
 
+  it('employee can preview approved COE document and employee.department is a primitive string', async () => {
+    const fileRes = await request(app.getHttpServer())
+      .post('/document-requests')
+      .set('Authorization', `Bearer ${employeeToken}`)
+      .send({
+        documentTypeId: coeTypeId,
+        purpose: 'Immigration visa requirement',
+      });
+    expect(fileRes.status).toBe(201);
+    const reqId = fileRes.body.id;
+
+    // HR approves
+    const approveRes = await request(app.getHttpServer())
+      .post(`/document-requests/${reqId}/decision`)
+      .set('Authorization', `Bearer ${hrToken}`)
+      .send({ decision: 'APPROVED' });
+    expect(approveRes.status).toBe(200);
+
+    // Fetch approved preview
+    const previewRes = await request(app.getHttpServer())
+      .get(`/document-requests/${reqId}/preview`)
+      .set('Authorization', `Bearer ${employeeToken}`);
+
+    expect(previewRes.status).toBe(200);
+    expect(previewRes.body.isDraft).toBe(false);
+    expect(previewRes.body.documentNo).toMatch(/^AZIR-DOC-\d{4}-\d{4}$/);
+    expect(typeof previewRes.body.employee.department).toBe('string');
+    expect(previewRes.body.reviewedBy).toBeDefined();
+    expect(previewRes.body.reviewedBy.firstName).toBeDefined();
+  });
+
   it('employee can cancel their own pending request, but cannot cancel approved request', async () => {
     // 1. File request
     const fileRes = await request(app.getHttpServer())

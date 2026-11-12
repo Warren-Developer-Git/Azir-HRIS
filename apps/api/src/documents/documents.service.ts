@@ -226,15 +226,36 @@ export class DocumentsService {
 
       // If already issued, return the frozen official snapshot
       if (req.status === 'APPROVED' && req.issuedDocument) {
+        const snap = (req.issuedDocument.snapshotData as any) || {};
+        const snapEmp = snap.employee || {};
         return {
           isDraft: false,
           watermark: null,
           documentNo: req.issuedDocument.documentNo,
           verificationCode: req.issuedDocument.verificationCode,
           issuedAt: req.issuedDocument.issuedAt,
-          employee: req.employee,
+          requestedAt: req.requestedAt,
+          purpose: snap.purpose || req.purpose,
+          payPeriod: snap.payPeriod || req.payPeriod,
           documentType: req.documentType,
-          purpose: req.purpose,
+          employee: {
+            id: req.employee.id,
+            firstName: snapEmp.firstName || req.employee.firstName,
+            lastName: snapEmp.lastName || req.employee.lastName,
+            employeeNo: snapEmp.employeeNo || req.employee.employeeNo,
+            position: snapEmp.position || req.employee.position,
+            department: typeof snapEmp.department === 'string'
+              ? snapEmp.department
+              : (snapEmp.department?.name || req.employee.department?.name || 'General'),
+            hireDate: snapEmp.hireDate || req.employee.hireDate,
+          },
+          reviewedBy: req.reviewedBy || (req.issuedDocument.issuedBy ? {
+            id: req.issuedDocument.issuedBy.id,
+            firstName: req.issuedDocument.issuedBy.firstName,
+            lastName: req.issuedDocument.issuedBy.lastName,
+            position: req.issuedDocument.issuedBy.position,
+          } : null),
+          balances: snap.balances || null,
           snapshotData: req.issuedDocument.snapshotData,
         };
       }
@@ -266,9 +287,10 @@ export class DocumentsService {
           lastName: req.employee.lastName,
           employeeNo: req.employee.employeeNo,
           position: req.employee.position,
-          department: req.employee.department?.name,
+          department: req.employee.department?.name || 'General',
           hireDate: req.employee.hireDate,
         },
+        reviewedBy: req.reviewedBy,
         balances,
       };
     });
