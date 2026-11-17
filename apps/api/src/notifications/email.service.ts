@@ -64,12 +64,31 @@ export class EmailService {
 
   async sendEmail(input: SendRawEmailInput): Promise<EmailSendOutcome> {
     const { targetEmail, routedOverrideNote } = this.resolveTargetEmail(input.to);
+    const preferredProvider = process.env.EMAIL_PROVIDER?.trim().toLowerCase();
     const smtp = this.getSmtpConfig();
-    if (smtp) {
-      return this.sendViaSmtp(smtp, input, targetEmail, routedOverrideNote);
+    const apiKey = process.env.RESEND_API_KEY?.trim();
+
+    if (preferredProvider === 'resend' && apiKey) {
+      return this.sendViaResend(apiKey, input, targetEmail, routedOverrideNote);
     }
 
-    const apiKey = process.env.RESEND_API_KEY?.trim();
+    if (smtp) {
+      const smtpOutcome = await this.sendViaSmtp(
+        smtp,
+        input,
+        targetEmail,
+        routedOverrideNote,
+      );
+      if (smtpOutcome.delivered || !apiKey) {
+        return smtpOutcome;
+      }
+
+      this.logger.log(
+        `Falling back to Resend HTTPS API for ${targetEmail} after SMTP failure`,
+      );
+      return this.sendViaResend(apiKey, input, targetEmail, routedOverrideNote);
+    }
+
     if (apiKey) {
       return this.sendViaResend(apiKey, input, targetEmail, routedOverrideNote);
     }

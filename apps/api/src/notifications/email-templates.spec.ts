@@ -258,4 +258,63 @@ describe('Email Templates & Validation', () => {
       }
     }
   });
+
+  it('falls back to Resend HTTPS when SMTP times out and RESEND_API_KEY is set, and honors EMAIL_PROVIDER=resend', async () => {
+    const prevEnv = {
+      SMTP_USER: process.env.SMTP_USER,
+      SMTP_PASS: process.env.SMTP_PASS,
+      RESEND_API_KEY: process.env.RESEND_API_KEY,
+      EMAIL_PROVIDER: process.env.EMAIL_PROVIDER,
+    };
+
+    try {
+      process.env.SMTP_USER = 'sender@gmail.com';
+      process.env.SMTP_PASS = 'abcdefghijklmnop';
+      process.env.RESEND_API_KEY = 're_fallback_key';
+      delete process.env.EMAIL_PROVIDER;
+
+      vi.spyOn(nodemailer, 'createTransport').mockReturnValueOnce({
+        sendMail: vi.fn().mockRejectedValue(new Error('Connection timeout')),
+      } as any);
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ id: 'resend-id-99' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+      vi.stubGlobal('fetch', fetchMock);
+
+      const svc = new EmailService();
+      const fallbackRes = await svc.sendEmail({
+        to: 'sender@gmail.com',
+        subject: 'Meeting',
+        html: '<p>Hi</p>',
+        text: 'Hi',
+      });
+
+      expect(fallbackRes.delivered).toBe(true);
+      expect(fallbackRes.mode).toBe('RESEND_API');
+      expect(fallbackRes.providerId).toBe('resend-id-99');
+
+      // Prefer Resend directly when EMAIL_PROVIDER=resend
+      process.env.EMAIL_PROVIDER = 'resend';
+      const smtpSpy = vi.spyOn(nodemailer, 'createTransport');
+      smtpSpy.mockClear();
+      const directRes = await svc.sendEmail({
+        to: 'sender@gmail.com',
+        subject: 'Meeting',
+        html: '<p>Hi</p>',
+        text: 'Hi',
+      });
+
+      expect(directRes.delivered).toBe(true);
+      expect(directRes.mode).toBe('RESEND_API');
+      expect(smtpSpy).not.toHaveBeenCalled();
+    } finally {
+      for (const [k, v] of Object.entries(prevEnv)) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+    }
+  });
 });

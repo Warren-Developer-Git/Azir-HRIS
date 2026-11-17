@@ -131,10 +131,10 @@ export default function EmployeesPage() {
       </div>
 
       {emailNotice && (
-        <div className="p-4 rounded-md border border-neutral-900 bg-neutral-900 text-white dark:border-neutral-100 dark:bg-neutral-100 dark:text-black text-xs flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <CheckCircle className="w-4 h-4 shrink-0" />
-            <span>{emailNotice}</span>
+        <div className="p-4 rounded-md border border-neutral-900 bg-neutral-900 text-white dark:border-neutral-100 dark:bg-neutral-100 dark:text-black text-xs flex items-start sm:items-center justify-between gap-3">
+          <div className="flex items-start sm:items-center gap-2 min-w-0">
+            <CheckCircle className="w-4 h-4 shrink-0 mt-0.5 sm:mt-0" />
+            <span className="min-w-0 break-words">{emailNotice}</span>
           </div>
           <button
             onClick={() => setEmailNotice(null)}

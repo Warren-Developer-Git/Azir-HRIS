@@ -131,9 +131,9 @@ export function NotificationBell() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 md:left-0 md:right-auto mt-2 w-[calc(100vw-2rem)] sm:w-96 max-w-sm sm:max-w-md rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-2xl z-50 overflow-hidden">
+        <div className="fixed left-4 right-4 top-16 md:absolute md:left-0 md:right-auto md:top-auto md:mt-2 md:w-96 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-2xl z-50 overflow-hidden">
           {/* Header */}
-          <div className="p-3 px-4 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
+          <div className="p-3 px-4 border-b border-neutral-100 dark:border-neutral-800 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span className="font-bold text-sm text-neutral-900 dark:text-neutral-100">
                 Notifications
@@ -182,7 +182,7 @@ export function NotificationBell() {
                   />
                   <div className="flex-1 min-w-0">
                     <p
-                      className={`leading-snug text-neutral-900 dark:text-neutral-100 ${
+                      className={`leading-snug break-words text-neutral-900 dark:text-neutral-100 ${
                         !item.readAt ? 'font-semibold' : 'font-normal text-neutral-600 dark:text-neutral-400'
                       }`}
                     >

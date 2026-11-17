@@ -104,12 +104,14 @@ export function AppSidebar() {
   return (
     <>
       {/* Mobile top bar */}
-      <div className="md:hidden flex items-center justify-between p-4 border-b border-neutral-200 bg-white dark:bg-black dark:border-neutral-800">
-        <div className="flex items-center gap-2">
-          <CompanyLogo variant="mark" className="h-6 w-auto" />
-          <span className="font-bold text-base tracking-tight text-neutral-900 dark:text-white">Azir Company</span>
+      <div className="md:hidden sticky top-0 z-30 flex items-center justify-between gap-2 px-4 py-3 border-b border-neutral-200 bg-white dark:bg-black dark:border-neutral-800">
+        <div className="flex items-center gap-2 min-w-0">
+          <CompanyLogo variant="mark" className="h-6 w-auto shrink-0" />
+          <span className="font-bold text-base tracking-tight text-neutral-900 dark:text-white truncate">
+            Azir Company
+          </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <NotificationBell />
           <ThemeToggle />
           <button
@@ -132,7 +134,7 @@ export function AppSidebar() {
 
       {/* Sidebar sidebar container */}
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-30 md:z-auto w-64 shrink-0 flex flex-col justify-between border-r border-neutral-200 bg-white dark:bg-black dark:border-neutral-800 transition-transform duration-200 md:translate-x-0 ${
+        className={`fixed md:static inset-y-0 left-0 z-40 md:z-auto w-64 shrink-0 flex flex-col justify-between border-r border-neutral-200 bg-white dark:bg-black dark:border-neutral-800 transition-transform duration-200 md:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
