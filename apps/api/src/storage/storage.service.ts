@@ -199,7 +199,7 @@ export class StorageService {
 
     const url =
       input.category === 'avatar'
-        ? `/api/storage/${key}`
+        ? `/storage/${key}`
         : `/api/storage/download?key=${encodeURIComponent(key)}`;
 
     return {

@@ -7,6 +7,13 @@ import { describe, beforeAll, afterAll, it, expect } from 'vitest';
 import { AppModule } from '../src/app.module.js';
 import { createOwnerPrisma, resetAndSeedTestDb } from './helpers.js';
 import { PrismaClient } from '@prisma/client';
+import { Clock } from '../src/leave/clock.js';
+
+class FixedClock extends Clock {
+  now(): Date {
+    return new Date('2026-11-10T01:00:00Z');
+  }
+}
 
 describe('Leave Approval Flow (e2e)', () => {
   let app: INestApplication<App>;
@@ -25,7 +32,10 @@ describe('Leave Approval Flow (e2e)', () => {
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(Clock)
+      .useValue(new FixedClock())
+      .compile();
 
     app = moduleFixture.createNestApplication();
     app.use(cookieParser());

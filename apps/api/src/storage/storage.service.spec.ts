@@ -105,7 +105,7 @@ describe('StorageService', () => {
 
     expect(avatar.provider).toBe('LOCAL_DISK');
     expect(avatar.key).toMatch(/^public\/tenant-a\/avatars\/[0-9a-f-]+\.jpg$/);
-    expect(avatar.url).toBe(`/api/storage/${avatar.key}`);
+    expect(avatar.url).toBe(`/storage/${avatar.key}`);
 
     const readBack = await svc.readObject(avatar.key);
     expect(readBack.buffer.equals(JPEG_HEADER)).toBe(true);
