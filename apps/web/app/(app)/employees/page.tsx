@@ -6,6 +6,10 @@ import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { UserAvatar } from '@/components/user-avatar';
 import {
+  SendEmailModal,
+  type EmailRecipientTarget,
+} from '@/components/send-email-modal';
+import {
   Users,
   Search,
   Plus,
@@ -14,6 +18,8 @@ import {
   Shield,
   ChevronLeft,
   ChevronRight,
+  Mail,
+  CheckCircle,
 } from 'lucide-react';
 
 interface EmployeeItem {
@@ -60,6 +66,8 @@ export default function EmployeesPage() {
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ACTIVE');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [emailTarget, setEmailTarget] = useState<EmailRecipientTarget | null>(null);
+  const [emailNotice, setEmailNotice] = useState<string | null>(null);
 
   const fetchEmployees = async (currentPage = 1, currentSearch = '', currentStatus = 'ACTIVE') => {
     try {
@@ -121,6 +129,21 @@ export default function EmployeesPage() {
           </div>
         )}
       </div>
+
+      {emailNotice && (
+        <div className="p-4 rounded-md border border-neutral-900 bg-neutral-900 text-white dark:border-neutral-100 dark:bg-neutral-100 dark:text-black text-xs flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 shrink-0" />
+            <span>{emailNotice}</span>
+          </div>
+          <button
+            onClick={() => setEmailNotice(null)}
+            className="underline hover:opacity-80 shrink-0"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {error && (
         <div className="p-4 rounded-md border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-sm flex items-start gap-3">
@@ -263,12 +286,31 @@ export default function EmployeesPage() {
                     </td>
 
                     <td className="px-5 py-4 whitespace-nowrap text-right">
-                      <Link
-                        href={`/employees/${emp.id}`}
-                        className="font-medium text-xs text-neutral-900 dark:text-neutral-100 hover:underline"
-                      >
-                        Details →
-                      </Link>
+                      <div className="inline-flex items-center gap-3">
+                        {can('email.send') && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setEmailTarget({
+                                employeeId: emp.id,
+                                name: `${emp.firstName} ${emp.lastName}`,
+                                email: emp.user?.email,
+                              })
+                            }
+                            className="inline-flex items-center gap-1 text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white transition-colors"
+                            title="Send Email or Meeting Invite"
+                          >
+                            <Mail className="w-3.5 h-3.5" />
+                            Email
+                          </button>
+                        )}
+                        <Link
+                          href={`/employees/${emp.id}`}
+                          className="font-medium text-xs text-neutral-900 dark:text-neutral-100 hover:underline"
+                        >
+                          Details →
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -302,6 +344,12 @@ export default function EmployeesPage() {
           </div>
         )}
       </div>
+
+      <SendEmailModal
+        recipient={emailTarget}
+        onClose={() => setEmailTarget(null)}
+        onSent={(msg) => setEmailNotice(msg)}
+      />
     </div>
   );
 }

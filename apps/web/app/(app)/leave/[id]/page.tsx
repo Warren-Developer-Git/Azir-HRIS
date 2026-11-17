@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { api, ApiError } from '@/lib/api';
+import { api, ApiError, downloadStorageFile } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { StatusBadge, LeaveStatus } from '@/components/status-badge';
 import {
@@ -18,6 +18,8 @@ import {
   AlertCircle,
   User,
   Building,
+  Paperclip,
+  Download,
 } from 'lucide-react';
 
 interface ApprovalRecord {
@@ -40,6 +42,8 @@ interface LeaveRequestDetail {
   endDate: string;
   days: number;
   reason: string;
+  attachmentKey?: string | null;
+  attachmentName?: string | null;
   status: LeaveStatus;
   createdAt: string;
   leaveType: {
@@ -88,6 +92,26 @@ export default function LeaveDetailPage() {
   const [decisionComment, setDecisionComment] = useState('');
   const [isSubmittingDecision, setIsSubmittingDecision] = useState(false);
   const [decisionError, setDecisionError] = useState<string | null>(null);
+  const [isDownloadingAttachment, setIsDownloadingAttachment] = useState(false);
+  const [attachmentDownloadError, setAttachmentDownloadError] = useState<string | null>(null);
+
+  const handleDownloadAttachment = async () => {
+    if (!request?.attachmentKey) return;
+    try {
+      setAttachmentDownloadError(null);
+      setIsDownloadingAttachment(true);
+      await downloadStorageFile(
+        request.attachmentKey,
+        request.attachmentName || undefined,
+      );
+    } catch (err: unknown) {
+      setAttachmentDownloadError(
+        err instanceof ApiError ? err.message : 'Failed to download supporting document',
+      );
+    } finally {
+      setIsDownloadingAttachment(false);
+    }
+  };
 
   const fetchDetail = async () => {
     try {
@@ -467,6 +491,36 @@ export default function LeaveDetailPage() {
                 {request.reason}
               </div>
             </div>
+          </div>
+        )}
+
+        {request.attachmentKey && (
+          <div className="px-5 py-3.5 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/60 dark:bg-neutral-950/40 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm text-neutral-800 dark:text-neutral-200">
+              <Paperclip className="w-4 h-4 text-neutral-500 shrink-0" />
+              <span className="font-medium">Supporting Document:</span>
+              <span className="text-neutral-600 dark:text-neutral-400">
+                {request.attachmentName || 'Attachment'}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleDownloadAttachment}
+              disabled={isDownloadingAttachment}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-900 dark:text-neutral-100 disabled:opacity-50 transition-colors"
+            >
+              {isDownloadingAttachment ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Download className="w-3.5 h-3.5" />
+              )}
+              {isDownloadingAttachment ? 'Downloading...' : 'Download Document'}
+            </button>
+            {attachmentDownloadError && (
+              <div className="w-full text-xs text-red-600 dark:text-red-400">
+                {attachmentDownloadError}
+              </div>
+            )}
           </div>
         )}
       </div>

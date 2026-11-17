@@ -36,7 +36,7 @@ export class UpdateEmployeeDto {
   gender?: Gender;
 
   @IsOptional()
-  @IsIn(['SINGLE', 'MARRIED', 'WIDOWED', 'DIVORCED'])
+  @IsIn(['SINGLE', 'MARRIED', 'WIDOWED', 'SEPARATED'])
   maritalStatus?: MaritalStatus;
 
   @IsOptional()

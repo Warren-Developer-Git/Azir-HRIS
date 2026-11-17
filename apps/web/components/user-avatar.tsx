@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { resolveMediaUrl } from '@/lib/api';
 
 export interface UserAvatarProps {
   src?: string | null;
@@ -26,19 +27,21 @@ export function UserAvatar({
   size = 'md',
   className = '',
 }: UserAvatarProps) {
-  const [imgError, setImgError] = useState(false);
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const sizeConfig = sizeClasses[size] || sizeClasses.md;
+  const resolvedSrc = resolveMediaUrl(src);
+  const imgError = Boolean(resolvedSrc && failedSrc === resolvedSrc);
 
   // If valid custom uploaded photo exists and didn't fail
-  if (src && !imgError) {
+  if (resolvedSrc && !imgError) {
     return (
       <div
         className={`relative inline-block shrink-0 rounded-full overflow-hidden border border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 ${sizeConfig.container} ${className}`}
       >
         <img
-          src={src}
+          src={resolvedSrc}
           alt={alt}
-          onError={() => setImgError(true)}
+          onError={() => setFailedSrc(resolvedSrc)}
           className="w-full h-full object-cover"
         />
       </div>

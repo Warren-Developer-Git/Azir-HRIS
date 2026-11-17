@@ -39,9 +39,9 @@ describe('Notifications API (e2e)', () => {
       return res.body.accessToken;
     }
 
-    managerToken = await getToken('manager@acme.test');
-    employeeToken = await getToken('employee@acme.test');
-    hrToken = await getToken('hr@acme.test');
+    managerToken = await getToken('manager@acgt.test');
+    employeeToken = await getToken('employee@acgt.test');
+    hrToken = await getToken('hr@acgt.test');
 
     const typesRes = await request(app.getHttpServer())
       .get('/leave-types')
@@ -155,5 +155,65 @@ describe('Notifications API (e2e)', () => {
       .set('Authorization', `Bearer ${employeeToken}`);
 
     expect(notifAfter.body.unread).toBe(0);
+  });
+
+  it('enforces RBAC & manager team scope on POST /notifications/send-email with default templates and meeting links', async () => {
+    const empRow = await ownerDb.employee.findFirst({
+      where: { user: { email: 'employee@acgt.test' } },
+      select: { id: true },
+    });
+    const hrRow = await ownerDb.employee.findFirst({
+      where: { user: { email: 'hr@acgt.test' } },
+      select: { id: true },
+    });
+
+    // 1. Regular employee cannot send manual emails (403)
+    const empForbidden = await request(app.getHttpServer())
+      .post('/notifications/send-email')
+      .set('Authorization', `Bearer ${employeeToken}`)
+      .send({
+        recipientEmployeeId: hrRow!.id,
+        preset: 'GENERAL_NOTICE',
+      });
+    expect(empForbidden.status).toBe(403);
+
+    // 2. Manager cannot email non-direct-report (HR) -> 403
+    const mgrOutOfScope = await request(app.getHttpServer())
+      .post('/notifications/send-email')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({
+        recipientEmployeeId: hrRow!.id,
+        preset: 'GENERAL_NOTICE',
+      });
+    expect(mgrOutOfScope.status).toBe(403);
+
+    // 3. Manager emails direct report with meeting link & empty subject/body (smart default fallback)
+    const mgrMeetRes = await request(app.getHttpServer())
+      .post('/notifications/send-email')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({
+        recipientEmployeeId: empRow!.id,
+        meetingUrl: 'https://meet.google.com/abc-defg-hij',
+        meetingAt: 'Nov 16, 2026 at 2:00 PM',
+      });
+
+    expect(mgrMeetRes.status).toBe(200);
+    expect(mgrMeetRes.body.preset).toBe('MEETING_INVITE');
+    expect(mgrMeetRes.body.meetingPlatform).toBe('Google Meet');
+    expect(mgrMeetRes.body.subject).toContain('Google Meet');
+    expect(mgrMeetRes.body.body).toContain('invited you to a Google Meet');
+
+    // 4. HR emails employee using DOCUMENT_NOTICE preset default content
+    const hrDocRes = await request(app.getHttpServer())
+      .post('/notifications/send-email')
+      .set('Authorization', `Bearer ${hrToken}`)
+      .send({
+        recipientEmployeeId: empRow!.id,
+        preset: 'DOCUMENT_NOTICE',
+      });
+
+    expect(hrDocRes.status).toBe(200);
+    expect(hrDocRes.body.preset).toBe('DOCUMENT_NOTICE');
+    expect(hrDocRes.body.body).toContain('Documents portal');
   });
 });

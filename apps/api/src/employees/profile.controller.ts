@@ -1,4 +1,14 @@
-import { Controller, Get, Patch, Body } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Post,
+  Delete,
+  Body,
+  UseInterceptors,
+  UploadedFile,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { EmployeesService } from './employees.service.js';
 import { CurrentUser } from '../auth/decorators.js';
 import type { AuthUser } from '../auth/permissions.js';
@@ -19,5 +29,23 @@ export class ProfileController {
     @Body() dto: UpdateProfileDto,
   ) {
     return this.employeesService.updateProfile(user, dto);
+  }
+
+  @Post('avatar')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 2 * 1024 * 1024 },
+    }),
+  )
+  async uploadAvatar(
+    @CurrentUser() user: AuthUser,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.employeesService.uploadAvatar(user, file);
+  }
+
+  @Delete('avatar')
+  async removeAvatar(@CurrentUser() user: AuthUser) {
+    return this.employeesService.removeAvatar(user);
   }
 }

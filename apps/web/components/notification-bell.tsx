@@ -74,7 +74,11 @@ export function NotificationBell() {
 
     if (item.link) {
       setIsOpen(false);
-      router.push(item.link);
+      let target = item.link;
+      if (target === '/payroll/my-payslips') {
+        target = '/payroll?tab=my-payslips';
+      }
+      router.push(target);
     }
   };
 

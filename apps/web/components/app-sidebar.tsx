@@ -21,6 +21,8 @@ import {
   Menu,
   X,
   FileText,
+  Banknote,
+  Clock,
 } from 'lucide-react';
 
 export function AppSidebar() {
@@ -42,16 +44,28 @@ export function AppSidebar() {
       visible: can('leave.file'),
     },
     {
+      label: 'Attendance & DTR',
+      href: '/attendance',
+      icon: Clock,
+      visible: can('attendance.punch') || can('attendance.view.own'),
+    },
+    {
       label: 'Approvals',
       href: '/approvals',
       icon: CheckSquare,
-      visible: can('leave.approve.manager') || can('leave.approve.hr'),
+      visible: can('leave.approve.manager') || can('leave.approve.hr') || can('attendance.approve'),
     },
     {
       label: 'Documents',
       href: '/documents',
       icon: FileText,
       visible: true,
+    },
+    {
+      label: 'Payroll',
+      href: '/payroll',
+      icon: Banknote,
+      visible: can('payroll.view.all') || can('payroll.view.own'),
     },
     {
       label: 'Team',
@@ -111,14 +125,14 @@ export function AppSidebar() {
       {/* Overlay for mobile */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          className="fixed inset-0 z-30 bg-black/50 md:hidden"
           onClick={() => setIsOpen(false)}
         />
       )}
 
       {/* Sidebar sidebar container */}
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-50 w-64 flex flex-col justify-between border-r border-neutral-200 bg-white dark:bg-black dark:border-neutral-800 transition-transform duration-200 md:translate-x-0 ${
+        className={`fixed md:static inset-y-0 left-0 z-30 md:z-auto w-64 shrink-0 flex flex-col justify-between border-r border-neutral-200 bg-white dark:bg-black dark:border-neutral-800 transition-transform duration-200 md:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

@@ -36,14 +36,14 @@ describe('Auth & Session (e2e)', () => {
   it('POST /auth/login successfully returns accessToken and sets httpOnly refresh cookie', async () => {
     const res = await request(app.getHttpServer())
       .post('/auth/login')
-      .send({ email: 'employee@acme.test', password: 'Demo1234!' });
+      .send({ email: 'employee@acgt.test', password: 'Demo1234!' });
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('accessToken');
     expect(res.body.user).toMatchObject({
-      email: 'employee@acme.test',
+      email: 'employee@acgt.test',
       roles: ['EMPLOYEE'],
-      tenantName: 'Acme Manila Corp',
+      tenantName: 'Azir Company Global Tech',
     });
     expect(res.body.user.name).toBeTruthy();
     expect(res.body.user.employeeId).toBeTruthy();
@@ -59,7 +59,7 @@ describe('Auth & Session (e2e)', () => {
   it('POST /auth/login rejects wrong password with 401', async () => {
     const res = await request(app.getHttpServer())
       .post('/auth/login')
-      .send({ email: 'employee@acme.test', password: 'WrongPassword999!' });
+      .send({ email: 'employee@acgt.test', password: 'WrongPassword999!' });
 
     expect(res.status).toBe(401);
     expect(res.body.message).toBe('Invalid email or password');
@@ -77,20 +77,20 @@ describe('Auth & Session (e2e)', () => {
   it('POST /auth/login rejects inactive user with 401', async () => {
     // Set dev1 to inactive
     await ownerDb.user.updateMany({
-      where: { email: 'dev1@acme.test' },
+      where: { email: 'dev1@acgt.test' },
       data: { active: false },
     });
 
     const res = await request(app.getHttpServer())
       .post('/auth/login')
-      .send({ email: 'dev1@acme.test', password: 'Demo1234!' });
+      .send({ email: 'dev1@acgt.test', password: 'Demo1234!' });
 
     expect(res.status).toBe(401);
     expect(res.body.message).toBe('Invalid email or password');
 
     // Restore dev1 active state
     await ownerDb.user.updateMany({
-      where: { email: 'dev1@acme.test' },
+      where: { email: 'dev1@acgt.test' },
       data: { active: true },
     });
   });
@@ -101,14 +101,14 @@ describe('Auth & Session (e2e)', () => {
 
     const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
-      .send({ email: 'hr@acme.test', password: 'Demo1234!' });
+      .send({ email: 'hr@acgt.test', password: 'Demo1234!' });
 
     const authRes = await request(app.getHttpServer())
       .get('/auth/me')
       .set('Authorization', `Bearer ${loginRes.body.accessToken}`);
 
     expect(authRes.status).toBe(200);
-    expect(authRes.body.email).toBe('hr@acme.test');
+    expect(authRes.body.email).toBe('hr@acgt.test');
     expect(authRes.body.roles).toContain('HR');
   });
 
@@ -118,7 +118,7 @@ describe('Auth & Session (e2e)', () => {
 
     const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
-      .send({ email: 'admin@acme.test', password: 'Demo1234!' });
+      .send({ email: 'admin@acgt.test', password: 'Demo1234!' });
 
     const cookieHeader = loginRes.headers['set-cookie'];
 
@@ -128,7 +128,7 @@ describe('Auth & Session (e2e)', () => {
 
     expect(refreshRes.status).toBe(200);
     expect(refreshRes.body).toHaveProperty('accessToken');
-    expect(refreshRes.body.user.email).toBe('admin@acme.test');
+    expect(refreshRes.body.user.email).toBe('admin@acgt.test');
   });
 
   it('POST /auth/logout clears the refresh cookie', async () => {
@@ -153,7 +153,7 @@ describe('Auth & Session (e2e)', () => {
     it('rejects invalid or wrong current password with 400', async () => {
       const loginRes = await request(app.getHttpServer())
         .post('/auth/login')
-        .send({ email: 'employee@acme.test', password: 'Demo1234!' });
+        .send({ email: 'employee@acgt.test', password: 'Demo1234!' });
       const token = loginRes.body.accessToken;
 
       const res = await request(app.getHttpServer())
@@ -167,7 +167,7 @@ describe('Auth & Session (e2e)', () => {
     it('rejects short new passwords (< 8 chars) with 400', async () => {
       const loginRes = await request(app.getHttpServer())
         .post('/auth/login')
-        .send({ email: 'employee@acme.test', password: 'Demo1234!' });
+        .send({ email: 'employee@acgt.test', password: 'Demo1234!' });
       const token = loginRes.body.accessToken;
 
       const res = await request(app.getHttpServer())
@@ -180,7 +180,7 @@ describe('Auth & Session (e2e)', () => {
     it('rejects new password if identical to current password with 400', async () => {
       const loginRes = await request(app.getHttpServer())
         .post('/auth/login')
-        .send({ email: 'employee@acme.test', password: 'Demo1234!' });
+        .send({ email: 'employee@acgt.test', password: 'Demo1234!' });
       const token = loginRes.body.accessToken;
 
       const res = await request(app.getHttpServer())
@@ -194,7 +194,7 @@ describe('Auth & Session (e2e)', () => {
     it('successfully changes password, verifies old password fails login, and new password succeeds', async () => {
       const loginRes = await request(app.getHttpServer())
         .post('/auth/login')
-        .send({ email: 'employee@acme.test', password: 'Demo1234!' });
+        .send({ email: 'employee@acgt.test', password: 'Demo1234!' });
       const token = loginRes.body.accessToken;
 
       // 1. Change password
@@ -208,13 +208,13 @@ describe('Auth & Session (e2e)', () => {
       // 2. Old password should now fail login
       const failLogin = await request(app.getHttpServer())
         .post('/auth/login')
-        .send({ email: 'employee@acme.test', password: 'Demo1234!' });
+        .send({ email: 'employee@acgt.test', password: 'Demo1234!' });
       expect(failLogin.status).toBe(401);
 
       // 3. New password should succeed login
       const succeedLogin = await request(app.getHttpServer())
         .post('/auth/login')
-        .send({ email: 'employee@acme.test', password: 'UpdatedSecurePass2026!' });
+        .send({ email: 'employee@acgt.test', password: 'UpdatedSecurePass2026!' });
       expect(succeedLogin.status).toBe(200);
       expect(succeedLogin.body).toHaveProperty('accessToken');
 

@@ -41,7 +41,7 @@ export default function NewEmployeePage() {
   const [hireDate, setHireDate] = useState('');
   const hireDateRef = useRef<HTMLInputElement>(null);
   const [gender, setGender] = useState<'MALE' | 'FEMALE'>('FEMALE');
-  const [maritalStatus, setMaritalStatus] = useState<'SINGLE' | 'MARRIED' | 'WIDOWED' | 'DIVORCED'>('SINGLE');
+  const [maritalStatus, setMaritalStatus] = useState<'SINGLE' | 'MARRIED' | 'WIDOWED' | 'SEPARATED'>('SINGLE');
   const [roles, setRoles] = useState<string[]>(['EMPLOYEE']);
 
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -238,7 +238,7 @@ export default function NewEmployeePage() {
                 <option value="SINGLE">Single</option>
                 <option value="MARRIED">Married</option>
                 <option value="WIDOWED">Widowed</option>
-                <option value="DIVORCED">Divorced</option>
+                <option value="SEPARATED">Separated</option>
               </select>
             </div>
           </div>
@@ -274,7 +274,7 @@ export default function NewEmployeePage() {
                 required
                 value={employeeNo}
                 onChange={(e) => setEmployeeNo(e.target.value)}
-                placeholder="e.g. ACM-015"
+                placeholder="e.g. ACGT-015"
                 className="w-full px-3 py-2 text-sm rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white"
               />
             </div>

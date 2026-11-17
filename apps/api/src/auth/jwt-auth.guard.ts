@@ -8,6 +8,7 @@ import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { IS_PUBLIC_KEY } from './decorators.js';
 import { AuthUser } from './permissions.js';
+import { getJwtAccessSecret } from './jwt-secrets.js';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -33,9 +34,9 @@ export class JwtAuthGuard implements CanActivate {
 
     const token = authHeader.split(' ')[1];
     try {
-      const secret =
-        process.env.JWT_ACCESS_SECRET || 'dev_access_secret_hrms_2026_super_secure';
-      const payload = await this.jwtService.verifyAsync(token, { secret });
+      const payload = await this.jwtService.verifyAsync(token, {
+        secret: getJwtAccessSecret(),
+      });
 
       const authUser: AuthUser = {
         userId: payload.sub,

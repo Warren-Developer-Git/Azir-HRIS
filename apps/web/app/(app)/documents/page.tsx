@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { api, ApiError } from '@/lib/api';
+import { api, ApiError, escapeHtml } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { CompanyLogo } from '@/components/company-logo';
 import { COMPANY_LOGO_DATA_URL, HR_SIGNATURE_DATA_URL } from '@/lib/document-assets';
@@ -237,7 +237,9 @@ function DocumentsContent() {
       return;
     }
 
-    const docTitle = `${previewItem.documentType.name} - ${previewData?.documentNo || 'Official Certificate'}`;
+    const docTitle = escapeHtml(
+      `${previewItem.documentType.name} - ${previewData?.documentNo || 'Official Certificate'}`,
+    );
 
     doc.open();
     doc.write(`
@@ -398,7 +400,9 @@ function DocumentsContent() {
     const cleanDocNo = docNo.replace(/[^a-zA-Z0-9-]/g, '_');
     const filename = `${previewItem.documentType.code}_${cleanDocNo}.html`;
 
-    const docTitle = `${previewItem.documentType.name} - ${previewData?.documentNo || 'Official Certificate'}`;
+    const docTitle = escapeHtml(
+      `${previewItem.documentType.name} - ${previewData?.documentNo || 'Official Certificate'}`,
+    );
 
     const htmlContent = `<!DOCTYPE html>
 <html lang="en">

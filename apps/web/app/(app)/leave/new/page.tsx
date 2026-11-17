@@ -4,7 +4,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api, ApiError } from '@/lib/api';
-import { CalendarDays, ArrowLeft, Loader2, AlertCircle, Info, Calendar } from 'lucide-react';
+import {
+  CalendarDays,
+  ArrowLeft,
+  Loader2,
+  AlertCircle,
+  Info,
+  Calendar,
+  Paperclip,
+  Upload,
+  X,
+  FileText,
+} from 'lucide-react';
 
 interface LeaveType {
   id: string;
@@ -13,7 +24,16 @@ interface LeaveType {
   kind: 'YEARLY' | 'PER_EVENT';
   defaultDays: number;
   countingMode: 'WORKING_DAYS' | 'CALENDAR_DAYS';
+  requiresAttachment?: boolean;
   description?: string;
+}
+
+interface UploadedAttachment {
+  key: string;
+  url: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
 }
 
 interface ExistingLeave {
@@ -58,9 +78,13 @@ export default function NewLeavePage() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [existingLeaves, setExistingLeaves] = useState<ExistingLeave[]>([]);
+  const [pendingAttachmentFile, setPendingAttachmentFile] = useState<File | null>(null);
+  const [uploadedAttachment, setUploadedAttachment] = useState<UploadedAttachment | null>(null);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
 
   const startDateRef = useRef<HTMLInputElement>(null);
   const endDateRef = useRef<HTMLInputElement>(null);
+  const attachmentInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -88,6 +112,35 @@ export default function NewLeavePage() {
     loadData();
   }, []);
 
+  const selectedType = types.find((t) => t.id === selectedTypeId);
+
+  const handleAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setAttachmentError('Only PDF, PNG, JPEG, or WEBP files are accepted.');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setAttachmentError('Supporting document must be 5 MB or smaller.');
+      return;
+    }
+
+    setAttachmentError(null);
+    setPendingAttachmentFile(file);
+    setUploadedAttachment(null);
+  };
+
+  const handleRemoveAttachment = () => {
+    setPendingAttachmentFile(null);
+    setUploadedAttachment(null);
+    setAttachmentError(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
@@ -107,9 +160,24 @@ export default function NewLeavePage() {
       setErrorMessage('Please provide a reason for the leave request.');
       return;
     }
+    if (selectedType?.requiresAttachment && !pendingAttachmentFile) {
+      setErrorMessage('Supporting document attachment is required for this leave type.');
+      return;
+    }
 
     try {
       setIsSubmitting(true);
+      let attachment = uploadedAttachment;
+      if (pendingAttachmentFile && !attachment) {
+        const formData = new FormData();
+        formData.append('file', pendingAttachmentFile);
+        attachment = await api<UploadedAttachment>('/leave/attachments', {
+          method: 'POST',
+          body: formData,
+        });
+        setUploadedAttachment(attachment);
+      }
+
       const res = await api<{ id: string }>('/leave/requests', {
         method: 'POST',
         body: JSON.stringify({
@@ -117,6 +185,12 @@ export default function NewLeavePage() {
           startDate: cleanStart,
           endDate: cleanEnd,
           reason: reason.trim(),
+          ...(attachment
+            ? {
+                attachmentKey: attachment.key,
+                attachmentName: attachment.originalName,
+              }
+            : {}),
         }),
       });
 
@@ -132,7 +206,6 @@ export default function NewLeavePage() {
     }
   };
 
-  const selectedType = types.find((t) => t.id === selectedTypeId);
   const isOverlapError = errorMessage && /overlap/i.test(errorMessage);
 
   return (
@@ -317,6 +390,64 @@ export default function NewLeavePage() {
             className="w-full px-3 py-2 text-sm rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white"
             required
           />
+        </div>
+
+        {/* Supporting Document Attachment */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
+              <Paperclip className="w-4 h-4 text-neutral-500" />
+              Supporting Document
+            </label>
+            <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
+              {selectedType?.requiresAttachment ? 'Required' : 'Optional'}
+            </span>
+          </div>
+
+          <input
+            ref={attachmentInputRef}
+            type="file"
+            accept=".pdf,image/png,image/jpeg,image/webp"
+            onChange={handleAttachmentChange}
+            className="hidden"
+          />
+
+          {pendingAttachmentFile ? (
+            <div className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-md border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 text-sm">
+              <div className="flex items-center gap-2 min-w-0">
+                <FileText className="w-4 h-4 text-neutral-500 shrink-0" />
+                <span className="truncate font-medium text-neutral-900 dark:text-neutral-100">
+                  {pendingAttachmentFile.name}
+                </span>
+                <span className="text-xs text-neutral-500 shrink-0">
+                  ({Math.max(1, Math.round(pendingAttachmentFile.size / 1024))} KB)
+                </span>
+              </div>
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={handleRemoveAttachment}
+                className="p-1 rounded hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-500 disabled:opacity-50"
+                title="Remove document"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => attachmentInputRef.current?.click()}
+              className="w-full px-4 py-3 rounded-md border border-dashed border-neutral-300 dark:border-neutral-700 hover:border-neutral-500 dark:hover:border-neutral-500 bg-neutral-50/50 dark:bg-neutral-950/50 text-sm text-neutral-600 dark:text-neutral-400 flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+            >
+              <Upload className="w-4 h-4" />
+              Select PDF, PNG, JPEG, or WEBP (max 5 MB, uploaded on submit)
+            </button>
+          )}
+
+          {attachmentError && (
+            <p className="text-xs text-red-600 dark:text-red-400">{attachmentError}</p>
+          )}
         </div>
 
         {/* Action Buttons */}

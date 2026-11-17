@@ -15,6 +15,8 @@ import {
   Trash2,
   CheckCircle,
   X,
+  RefreshCw,
+  Globe,
 } from 'lucide-react';
 
 interface LeaveType {
@@ -74,6 +76,8 @@ export default function SettingsPage() {
 
   const [modalSubmitting, setModalSubmitting] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+  const [syncYear, setSyncYear] = useState(2026);
+  const [isSyncingHolidays, setIsSyncingHolidays] = useState(false);
 
   const loadData = async () => {
     try {
@@ -299,6 +303,39 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSyncHolidays = async () => {
+    setIsSyncingHolidays(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await api<{
+        source: string;
+        year: number;
+        countryCode: string;
+        fetchedCount: number;
+        createdCount: number;
+        skippedCount: number;
+      }>('/holidays/sync', {
+        method: 'POST',
+        body: JSON.stringify({ year: syncYear, countryCode: 'PH' }),
+      });
+
+      setMessage({
+        type: 'success',
+        text: `Synced ${res.year} ${res.countryCode} holidays from ${res.source}: ${res.createdCount} added, ${res.skippedCount} already existed.`,
+      });
+      await loadData();
+    } catch (err: any) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : 'Failed to sync holidays from external API',
+      );
+    } finally {
+      setIsSyncingHolidays(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -333,13 +370,35 @@ export default function SettingsPage() {
           )}
 
           {tab === 'holidays' && can('holiday.write') && (
-            <button
-              onClick={() => handleOpenHolidayModal()}
-              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded bg-black text-white hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 transition-colors shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              Add Holiday
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={syncYear}
+                onChange={(e) => setSyncYear(Number(e.target.value))}
+                aria-label="Sync year"
+                className="px-2.5 py-2 text-xs font-medium rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100"
+              >
+                <option value={2025}>2025 (PH)</option>
+                <option value={2026}>2026 (PH)</option>
+                <option value={2027}>2027 (PH)</option>
+              </select>
+              <button
+                onClick={handleSyncHolidays}
+                disabled={isSyncingHolidays}
+                className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-50 transition-colors shadow-sm"
+              >
+                <RefreshCw
+                  className={`w-3.5 h-3.5 ${isSyncingHolidays ? 'animate-spin' : ''}`}
+                />
+                {isSyncingHolidays ? 'Syncing...' : 'Sync PH Holidays (API)'}
+              </button>
+              <button
+                onClick={() => handleOpenHolidayModal()}
+                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded bg-black text-white hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 transition-colors shadow-sm"
+              >
+                <Plus className="w-4 h-4" />
+                Add Holiday
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -491,7 +550,18 @@ export default function SettingsPage() {
             </table>
           </div>
         ) : tab === 'holidays' ? (
-          <div className="overflow-x-auto">
+          <div>
+            <div className="px-5 py-3 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50/60 dark:bg-neutral-950/30 flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400">
+              <Globe className="w-3.5 h-3.5 shrink-0" />
+              <span>
+                External API Integration: Philippine public holidays sync live from{' '}
+                <span className="font-mono font-medium text-neutral-900 dark:text-neutral-200">
+                  Nager.Date Public Holidays API
+                </span>{' '}
+                and automatically feed into Leave working days, DOLE SLAs, and Attendance rules.
+              </span>
+            </div>
+            <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-neutral-50 dark:bg-neutral-950/50 border-b border-neutral-200 dark:border-neutral-800 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                 <tr>
@@ -539,6 +609,7 @@ export default function SettingsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
           </div>
         ) : (
           <div className="overflow-x-auto">

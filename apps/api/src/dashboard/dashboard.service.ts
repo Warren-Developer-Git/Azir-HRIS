@@ -3,6 +3,15 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { BalancesService } from '../leave/balances.service.js';
 import { AuthUser, hasPermission } from '../auth/permissions.js';
 
+function getManilaDateString(date: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Manila',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
 @Injectable()
 export class DashboardService {
   constructor(
@@ -37,9 +46,23 @@ export class DashboardService {
         take: 5,
       });
 
+      const todayStr = getManilaDateString(new Date());
+      const todayDate = new Date(`${todayStr}T00:00:00.000Z`);
+
+      const todayAttendance = await tx.attendanceRecord.findUnique({
+        where: {
+          tenantId_employeeId_date: {
+            tenantId: user.tenantId,
+            employeeId: user.employeeId,
+            date: todayDate,
+          },
+        },
+      });
+
       const response: any = {
         myBalances,
         myRecentRequests,
+        todayAttendance,
       };
 
       // 3. Awaiting approvals (for Managers and HR)
@@ -96,6 +119,41 @@ export class DashboardService {
         response.awaitingMe = {
           count: awaitingCount,
           items: awaitingItems,
+        };
+      }
+
+      // 3b. Awaiting Attendance / OB Slips approvals
+      if (hasPermission(user, 'attendance.approve')) {
+        const isHrOrAdmin = user.roles.includes('HR') || user.roles.includes('ADMIN');
+        const attWhere: any = {
+          tenantId: user.tenantId,
+          status: 'PENDING',
+          ...(isHrOrAdmin ? {} : { employee: { managerId: user.employeeId } }),
+        };
+
+        const [attCount, attItems] = await Promise.all([
+          tx.attendanceCorrectionRequest.count({ where: attWhere }),
+          tx.attendanceCorrectionRequest.findMany({
+            where: attWhere,
+            include: {
+              employee: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  employeeNo: true,
+                  position: true,
+                },
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 5,
+          }),
+        ]);
+
+        response.awaitingAttendance = {
+          count: attCount,
+          items: attItems,
         };
       }
 

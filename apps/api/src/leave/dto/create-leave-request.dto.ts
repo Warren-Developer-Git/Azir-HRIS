@@ -1,4 +1,4 @@
-import { IsDateString, IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import { IsDateString, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export function normalizeDateInput(value: unknown): unknown {
@@ -35,4 +35,12 @@ export class CreateLeaveRequestDto {
   @IsString({ message: 'reason must be a string' })
   @IsNotEmpty({ message: 'reason is required' })
   reason!: string;
+
+  @IsOptional()
+  @IsString({ message: 'attachmentKey must be a string' })
+  attachmentKey?: string;
+
+  @IsOptional()
+  @IsString({ message: 'attachmentName must be a string' })
+  attachmentName?: string;
 }

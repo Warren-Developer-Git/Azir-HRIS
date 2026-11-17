@@ -37,14 +37,14 @@ describe('Audit Logs API (e2e)', () => {
       return res.body.accessToken;
     }
 
-    hrToken = await getToken('hr@acme.test');
-    employeeToken = await getToken('employee@acme.test');
+    hrToken = await getToken('hr@acgt.test');
+    employeeToken = await getToken('employee@acgt.test');
     bayanihanHrToken = await getToken('hr@bayanihan.test');
 
     // Create a department in Acme to generate an audit log
     await request(app.getHttpServer())
       .post('/departments')
-      .set('Authorization', `Bearer ${await getToken('admin@acme.test')}`)
+      .set('Authorization', `Bearer ${await getToken('admin@acgt.test')}`)
       .send({ name: 'Quality Assurance' });
   });
 

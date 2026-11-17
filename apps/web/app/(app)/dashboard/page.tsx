@@ -80,12 +80,42 @@ interface HeadcountData {
   }>;
 }
 
+interface TodayAttendanceItem {
+  id: string;
+  date: string;
+  timeIn: string | null;
+  timeOut: string | null;
+  locationType: 'OFFICE' | 'FIELD_CLIENT_SITE' | 'REMOTE_WFH';
+  status: string;
+  lateMinutes: number;
+}
+
+interface AwaitingAttendanceItem {
+  id: string;
+  date: string;
+  type: 'MISSED_PUNCH' | 'OFFICIAL_BUSINESS';
+  destination: string | null;
+  reason: string;
+  employee: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    employeeNo: string;
+    position: string;
+  };
+}
+
 interface DashboardData {
   myBalances: BalanceItem[];
   myRecentRequests: RecentRequestItem[];
+  todayAttendance?: TodayAttendanceItem | null;
   awaitingMe?: {
     count: number;
     items: AwaitingItem[];
+  };
+  awaitingAttendance?: {
+    count: number;
+    items: AwaitingAttendanceItem[];
   };
   teamOnLeaveThisWeek?: TeamOnLeaveItem[];
   headcount?: HeadcountData;
@@ -101,6 +131,7 @@ export default function DashboardPage() {
 
   const [isGranting, setIsGranting] = useState(false);
   const [grantMessage, setGrantMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isPunching, setIsPunching] = useState(false);
 
   const loadDashboard = async () => {
     try {
@@ -146,6 +177,46 @@ export default function DashboardPage() {
     }
   };
 
+  const handleQuickPunch = async () => {
+    try {
+      setIsPunching(true);
+      setGrantMessage(null);
+      const res = await api<{ action: string }>('/attendance/punch', {
+        method: 'POST',
+        body: JSON.stringify({ locationType: 'OFFICE' }),
+      });
+      setGrantMessage({
+        type: 'success',
+        text:
+          res.action === 'CLOCKED_IN'
+            ? 'Clocked in successfully for today.'
+            : 'Clocked out successfully for today.',
+      });
+      await loadDashboard();
+    } catch (err: any) {
+      setGrantMessage({
+        type: 'error',
+        text: err instanceof ApiError ? err.message : 'Failed to record attendance punch',
+      });
+    } finally {
+      setIsPunching(false);
+    }
+  };
+
+  const formatManilaTime = (iso?: string | null) => {
+    if (!iso) return '--:--';
+    try {
+      return new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Manila',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      }).format(new Date(iso));
+    } catch {
+      return '--:--';
+    }
+  };
+
   const formatDateRange = (start: string, end: string) => {
     try {
       const s = new Date(start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -158,6 +229,8 @@ export default function DashboardPage() {
 
   const totalAvailableDays =
     data?.myBalances?.reduce((sum, b) => sum + (b.available || 0), 0) || 0;
+  const totalPendingApprovals =
+    (data?.awaitingMe?.count || 0) + (data?.awaitingAttendance?.count || 0);
 
   return (
     <div className="space-y-6">
@@ -245,6 +318,61 @@ export default function DashboardPage() {
         </div>
       ) : (
         <>
+          {/* Today's Attendance Quick Punch Strip */}
+          {can('attendance.punch') && (
+            <div className="p-5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+              <div className="flex items-start sm:items-center gap-3.5">
+                <div className="p-2.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
+                  <Clock className="w-5 h-5 text-neutral-900 dark:text-neutral-100" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-bold text-sm text-neutral-900 dark:text-neutral-100">
+                      Today&apos;s Attendance
+                    </h2>
+                    {data?.todayAttendance ? (
+                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-neutral-900 text-white dark:bg-white dark:text-neutral-900">
+                        {data.todayAttendance.status}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded border border-neutral-300 dark:border-neutral-700 text-neutral-500">
+                        NOT CLOCKED IN
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 font-mono">
+                    Time In: {formatManilaTime(data?.todayAttendance?.timeIn)} &bull; Time Out:{' '}
+                    {formatManilaTime(data?.todayAttendance?.timeOut)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {!data?.todayAttendance?.timeOut && (
+                  <button
+                    type="button"
+                    onClick={handleQuickPunch}
+                    disabled={isPunching}
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-xs font-semibold text-white transition-colors disabled:opacity-50 ${
+                      !data?.todayAttendance?.timeIn
+                        ? 'bg-emerald-600 hover:bg-emerald-700'
+                        : 'bg-rose-600 hover:bg-rose-700'
+                    }`}
+                  >
+                    {isPunching && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    {!data?.todayAttendance?.timeIn ? 'Quick Clock In' : 'Quick Clock Out'}
+                  </button>
+                )}
+                <Link
+                  href="/attendance"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md border border-neutral-300 dark:border-neutral-700 text-xs font-semibold text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                >
+                  Open DTR / OB <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+          )}
+
           {/* Key Metric Overview Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
@@ -258,7 +386,7 @@ export default function DashboardPage() {
               <p className="text-[11px] text-neutral-400 mt-1">Available across all active policies</p>
             </div>
 
-            {data?.awaitingMe !== undefined && (
+            {(data?.awaitingMe !== undefined || data?.awaitingAttendance !== undefined) && (
               <Link
                 href="/approvals"
                 className="p-5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:border-black dark:hover:border-white transition-all group"
@@ -269,12 +397,14 @@ export default function DashboardPage() {
                 </div>
                 <div className="text-2xl font-bold font-mono tracking-tight text-neutral-900 dark:text-neutral-100 flex items-center justify-between">
                   <span>
-                    {data.awaitingMe.count}{' '}
+                    {totalPendingApprovals}{' '}
                     <span className="text-xs font-normal text-neutral-400">requests</span>
                   </span>
                   <ArrowRight className="w-4 h-4 text-neutral-400 group-hover:translate-x-1 transition-transform" />
                 </div>
-                <p className="text-[11px] text-neutral-400 mt-1">Click to open Approvals hub</p>
+                <p className="text-[11px] text-neutral-400 mt-1">
+                  {data?.awaitingMe?.count || 0} leave &bull; {data?.awaitingAttendance?.count || 0} OB/attendance
+                </p>
               </Link>
             )}
 
@@ -313,14 +443,14 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Section: Needs Your Review (If awaitingMe has items) */}
-          {data?.awaitingMe && data.awaitingMe.count > 0 && (
+          {/* Section: Needs Your Review (Leave + OB / Attendance) */}
+          {totalPendingApprovals > 0 && (
             <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 space-y-4 shadow-sm">
               <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800">
                 <div className="flex items-center gap-2">
                   <CheckSquare className="w-4 h-4" />
                   <h2 className="font-bold text-sm text-neutral-900 dark:text-neutral-100">
-                    Requests Awaiting Your Approval ({data.awaitingMe.count})
+                    Requests Awaiting Your Approval ({totalPendingApprovals})
                   </h2>
                 </div>
                 <Link
@@ -332,7 +462,7 @@ export default function DashboardPage() {
               </div>
 
               <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
-                {data.awaitingMe.items.map((item) => (
+                {data?.awaitingMe?.items.map((item) => (
                   <div key={item.id} className="py-3 flex items-center justify-between gap-4">
                     <div className="min-w-0">
                       <div className="font-semibold text-xs text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
@@ -350,6 +480,31 @@ export default function DashboardPage() {
                     </div>
                     <Link
                       href={`/approvals?id=${item.id}`}
+                      className="px-3 py-1 text-xs font-semibold rounded border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 shrink-0 transition-colors"
+                    >
+                      Review
+                    </Link>
+                  </div>
+                ))}
+
+                {data?.awaitingAttendance?.items.map((item) => (
+                  <div key={item.id} className="py-3 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="font-semibold text-xs text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                        <span>
+                          {item.employee.firstName} {item.employee.lastName}
+                        </span>
+                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400">
+                          {item.type === 'OFFICIAL_BUSINESS' ? 'OB SLIP' : 'MISSED PUNCH'}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-neutral-400 font-mono mt-0.5">
+                        {new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        {item.destination ? ` • ${item.destination}` : ''} &bull; &ldquo;{item.reason}&rdquo;
+                      </div>
+                    </div>
+                    <Link
+                      href="/attendance?tab=approvals"
                       className="px-3 py-1 text-xs font-semibold rounded border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 shrink-0 transition-colors"
                     >
                       Review

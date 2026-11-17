@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { BalancesService } from './balances.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { StorageService } from '../storage/storage.service.js';
 import { Clock } from './clock.js';
 import {
   todayInManila,
@@ -34,9 +35,45 @@ export class LeaveRequestsService {
     private readonly balancesService: BalancesService,
     private readonly clock: Clock,
     private readonly notificationsService: NotificationsService,
+    private readonly storageService: StorageService,
   ) {}
 
+  async uploadAttachment(user: AuthUser, file?: Express.Multer.File) {
+    if (!file?.buffer) {
+      throw new BadRequestException('Attachment file is required');
+    }
+
+    const originalName = file.originalname || 'attachment';
+    const uploaded = await this.storageService.uploadFile({
+      tenantId: user.tenantId,
+      category: 'leave-attachment',
+      buffer: file.buffer,
+      mimeType: file.mimetype,
+      originalName,
+    });
+
+    return {
+      key: uploaded.key,
+      url: uploaded.url,
+      originalName,
+      mimeType: uploaded.mimeType,
+      sizeBytes: uploaded.sizeBytes,
+      provider: uploaded.provider,
+    };
+  }
+
   async fileRequest(user: AuthUser, dto: CreateLeaveRequestDto) {
+    const attachmentKey = dto.attachmentKey?.trim() || null;
+    const attachmentName = attachmentKey ? dto.attachmentName?.trim() || null : null;
+    const expectedPrefix = `tenants/${user.tenantId}/leave-attachments/`;
+
+    if (
+      attachmentKey &&
+      (!attachmentKey.startsWith(expectedPrefix) || attachmentKey.includes('..'))
+    ) {
+      throw new BadRequestException('Invalid leave attachment key');
+    }
+
     return this.prisma.withTenant(user.tenantId, async (tx) => {
       // Row lock on the employee to prevent race conditions / double submit
       await tx.$executeRaw`SELECT 1 FROM "Employee" WHERE id = ${user.employeeId}::uuid FOR UPDATE`;
@@ -56,6 +93,12 @@ export class LeaveRequestsService {
 
       if (!leaveType || !leaveType.active) {
         throw new BadRequestException('You are not eligible for this leave type');
+      }
+
+      if (leaveType.requiresAttachment && !attachmentKey) {
+        throw new BadRequestException(
+          'Supporting document attachment is required for this leave type',
+        );
       }
 
       // Rule 1: startDate <= endDate
@@ -165,6 +208,8 @@ export class LeaveRequestsService {
           endDate: new Date(dto.endDate),
           days,
           reason: dto.reason,
+          attachmentKey,
+          attachmentName,
           status: initialStatus,
         },
         include: {

@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   Post,
@@ -6,9 +7,11 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { NotificationsService } from './notifications.service.js';
-import { CurrentUser } from '../auth/decorators.js';
+import { CurrentUser, RequirePermission } from '../auth/decorators.js';
 import type { AuthUser } from '../auth/permissions.js';
+import { SendEmailDto } from './dto/send-email.dto.js';
 
 @Controller('notifications')
 export class NotificationsController {
@@ -17,6 +20,17 @@ export class NotificationsController {
   @Get()
   async getNotifications(@CurrentUser() user: AuthUser) {
     return this.notificationsService.getUserNotifications(user);
+  }
+
+  @RequirePermission('email.send', 'email.send_team')
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @Post('send-email')
+  @HttpCode(HttpStatus.OK)
+  async sendManualEmail(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: SendEmailDto,
+  ) {
+    return this.notificationsService.sendManualEmail(user, dto);
   }
 
   @Post(':id/read')

@@ -41,11 +41,11 @@ describe('Leave Approval Flow (e2e)', () => {
       return res.body.accessToken;
     }
 
-    employeeToken = await getToken('employee@acme.test');
-    managerToken = await getToken('manager@acme.test');
-    hrToken = await getToken('hr@acme.test');
-    hr2Token = await getToken('hr2@acme.test');
-    otherManagerToken = await getToken('depthead@acme.test');
+    employeeToken = await getToken('employee@acgt.test');
+    managerToken = await getToken('manager@acgt.test');
+    hrToken = await getToken('hr@acgt.test');
+    hr2Token = await getToken('hr2@acgt.test');
+    otherManagerToken = await getToken('depthead@acgt.test');
 
     const typesRes = await request(app.getHttpServer())
       .get('/leave-types')

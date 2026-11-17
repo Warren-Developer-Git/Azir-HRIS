@@ -1,118 +1,122 @@
-# 🏢 Enterprise Multi-Tenant Human Resources Management System (HRMS)
+# Azir Company Global Tech (ACGT) — Enterprise Multi-Tenant HRMS
 
-A production-grade, multi-tenant Human Resources Management System specialized for **Philippine Labor Law Statutory Leave Compliance** with database-level isolation enforced by **PostgreSQL Row-Level Security (RLS)**.
+A production-grade, multi-tenant **Human Resources Management System** specialized for **Philippine Labor Law Compliance** across **Leave Management**, **Attendance / DTR / Official Business (OB)**, **Statutory Payroll**, **Verifiable HR Documents**, and **Cloud Object Storage**, with database-level tenant isolation enforced by **PostgreSQL Row-Level Security (RLS)**.
 
-Built with **Next.js 16 (App Router)**, **NestJS 12**, **Prisma ORM**, **PostgreSQL 18**, and **Tailwind CSS v4** in a strictly monochrome black & white design system.
+Built with **Next.js 16 (App Router)**, **React 19**, **NestJS 12**, **Prisma ORM 6**, **PostgreSQL 16+**, and **Tailwind CSS v4** in a `pnpm` workspace monorepo.
 
 ---
 
-## ⚡ Quick Start & Setup
+## Quick Start & Local Setup
 
 ### Prerequisites
-- Node.js 20+
-- pnpm 9+
-- PostgreSQL 16+ (running locally on port 5432)
+- **Node.js 24+** (LTS / v24.19 verified)
+- **pnpm 12.18.0** (`corepack enable`)
+- **PostgreSQL 16+** running locally on port `5432`
 
-### 1. Installation
+### 1. Install Dependencies
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/HumanResources-Management-System.git
+git clone <your-repo-url>
 cd HumanResources-Management-System
-
-# Install dependencies
 pnpm install
 ```
 
-### 2. Database Dual-Role Initialization
-Ensure your local PostgreSQL service has the database roles configured:
+### 2. Configure Environment Variables
+Copy the example environment templates (never commit real `.env` files):
 ```bash
-# Run PostgreSQL dual-role setup (creates hrms_owner and hrms_app)
-psql -U postgres -f packages/db/setup.sql
+cp apps/api/.env.example apps/api/.env
+cp apps/web/.env.example apps/web/.env
 ```
+Key optional integrations in `apps/api/.env`:
+- **Cloud Object Storage:** `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (`sb_secret_...` or `service_role` JWT), `SUPABASE_STORAGE_BUCKET` (falls back to `apps/api/uploads/` local disk when omitted).
+- **Email Delivery:** `SMTP_USER` + `SMTP_PASS` (Gmail App Password) and/or `RESEND_API_KEY`, plus `EMAIL_DEMO_OVERRIDE` for routing synthetic `.test` demo notifications safely (falls back to `LOG_ONLY` mode when omitted).
 
-### 3. Reset & Seed Test Data
-Seeds 2 isolated tenant corporations (Acme Manila Corp & Bayanihan Foods), 17 employees across 4 roles, 2026 Philippine national holidays, and initial balance ledgers:
+### 3. Initialize PostgreSQL Roles, Migrations & Seed Data
 ```bash
-pnpm db:reset
+# Run dual-role database setup (creates hrms_owner, hrms_app, hrms, and hrms_test)
+psql -U postgres -f apps/api/prisma/setup.sql
+
+# Apply non-destructive Prisma migrations & generate client
+pnpm --filter api exec prisma migrate deploy
+pnpm --filter api exec prisma generate
+
+# Seed tenants (Azir Company Global Tech & Bayanihan Foods), employees, holidays & ledgers
+pnpm --filter api exec prisma db seed
 ```
+*(Avoid `pnpm db:reset` on active databases with custom records.)*
 
 ### 4. Start Development Servers
 ```bash
 pnpm dev
 ```
-- **Web Portal:** [http://localhost:3000](http://localhost:3000)
-- **API Server:** [http://localhost:4000](http://localhost:4000)
+- **Web Portal:** http://localhost:3000
+- **API Server:** http://localhost:4000 (Live health: `/health`, DB readiness: `/health/ready`)
 
 ---
 
-## 👥 Demo Accounts (1-Click Login Available)
+## Demo Accounts (Password: `Demo1234!`)
 
-All demo accounts use the default password: **`Demo1234!`**
-
-| User / Persona | Email | Roles | Access Level & Key Capabilities |
-|:---|:---|:---|:---|
-| **Maria Santos** | `employee@acme.test` | `EMPLOYEE` | Files statutory leave (SIL, Maternity, VL, SL), checks balance ledger, views personal profile. |
-| **Juan Dela Cruz** | `manager@acme.test` | `MANAGER`, `EMPLOYEE` | Step 1 leave approver, direct reports overview (`/team`), reviews team out-of-office schedule. |
-| **Anna Reyes** | `hr@acme.test` | `HR`, `EMPLOYEE` | Step 2 final leave approver, annual balance grant runner, manual balance adjustments, employee directory management. |
-| **Carlos Tan** | `admin@acme.test` | `ADMIN`, `EMPLOYEE` | Company Admin with organization settings management (policies, holidays, departments), role assignment, and audit logs. |
+| User / Persona | Email | Roles | Key Capabilities |
+| :--- | :--- | :--- | :--- |
+| **Gabriela Silang** | `employee@acgt.test` | `EMPLOYEE` | Web clock-in/out, OB slips & missed punches, statutory leave + attachments, document requests, payslips, profile avatars & password change. |
+| **Manuel Quezon** | `manager@acgt.test` | `MANAGER`, `EMPLOYEE` | Step-1 leave approvals, 1-step OB/missed-punch approvals, team roster (`/team`) with field-level salary protection. |
+| **Maria Clara** | `hr@acgt.test` | `HR`, `EMPLOYEE` | Step-2 final leave approvals, employee management, balance grants/adjustments, payroll generation & CSV/register export, document issuance. |
+| **Alejandro Reyes** | `admin@acgt.test` | `ADMIN`, `EMPLOYEE` | Organization settings (departments, leave types, Nager.Date holiday sync), role assignment, payroll approvals, audit logs. |
 
 ---
 
-## 🇵🇭 Philippine Statutory Leave Compliance Rules
+## Core Modules & Capabilities
 
-The leave engine is implemented in `apps/api/src/leave/leave-rules.ts` as deterministic pure functions operating in `Asia/Manila` timezone:
-
-1. **Service Incentive Leave (SIL - Labor Code Art. 95):**
-   - 5 working days per year for employees with at least 1 year (12 months) of service.
-2. **Maternity Leave (RA 11210 / 105-Day Expanded Maternity Leave Act):**
-   - 105 calendar days for female employees, regardless of marital status.
-3. **Paternity Leave (RA 8187):**
-   - 7 working days for married male employees for up to 4 deliveries of legitimate spouse.
-4. **Vacation Leave (VL) & Sick Leave (SL):**
-   - 10 days each, available immediately upon tenure.
-5. **Holiday & Working Day Calculations:**
-   - Excludes Sundays and Philippine National Holidays (Regular and Special Non-Working).
-
----
-
-## 🏛️ Architecture Highlights
-
-```mermaid
-graph LR
-    Browser["Next.js 16 Web\n(Turbopack, Tailwind v4)"] -->|JWT & Cookies| Nest["NestJS 12 API\n(Port 4000)"]
-    Nest --> Auth["Auth & RBAC Guards"]
-    Nest --> Engine["Manila Pure Leave Engine"]
-    Nest --> Audit["Compliance Audit Trail"]
-    Nest -->|"SET LOCAL app.current_tenant_id"| RLS["PostgreSQL 18 RLS"]
-```
-
-- **PostgreSQL Row-Level Security (RLS):** True engine-level multi-tenancy. Standard web queries run under `hrms_app` which cannot read or write data belonging to another tenant even if an application query lacks `WHERE tenantId`.
-- **Double-Entry Leave Ledger:** Balances are not stored as mutable integers; they are dynamically computed from an append-only ledger (`GRANT`, `DEDUCT`, `ADJUST`).
-- **Two-Step Approval Flow:** Employee submits → Direct Manager approves (Step 1) → HR Administrator confirms (Step 2) → Ledger atomically deducted.
-- **Optimistic Concurrency Control:** Row-version state matching prevents race conditions and over-allocation (returns `409 Conflict`).
-- **Safe Soft-Deactivation:** In-use departments and leave types are deactivated rather than deleted, preserving referential integrity and audit records.
-- **Compliance Audit Logging:** All mutations record before/after JSON states with user identity and timestamp.
+1. **Philippine Statutory Leave & Double-Entry Ledger (`apps/api/src/leave`, `/leave`, `/approvals`):**
+   - Pure deterministic rules in `Asia/Manila` timezone for **SIL (Art. 95)**, **Maternity Leave (RA 11210 — 105 calendar days)**, **Paternity Leave (RA 8187 — 7 working days)**, **VL**, and **SL**, excluding Sundays and tenant Philippine holidays.
+   - Immutable append-only `LeaveLedgerEntry` (`GRANT`, `DEDUCT`, `ADJUST`), `FOR UPDATE` overlap guards, optimistic concurrency checks (`409 Conflict`), and deferred supporting document uploads on submit.
+2. **Attendance, Daily Time Records (DTR) & Official Business (`apps/api/src/attendance`, `/attendance`):**
+   - Web clock-in/out with location tags (`OFFICE`, `FIELD_CLIENT_SITE`, `REMOTE_WFH`), 9:00 AM – 6:00 PM shift with 15-minute grace window, minute-rate tardiness/undertime computation, and 1-step manager OB/missed-punch approval.
+3. **Philippine Statutory Payroll & Payslips (`apps/api/src/payroll`, `/payroll`, `/payroll/my-payslips`):**
+   - Semi-monthly gross-to-net calculation integrating unpaid leave, tardiness/absences, `1.25x` overtime, allowances, bonuses, and manual adjustments.
+   - Computes **SSS**, **PhilHealth**, **Pag-IBIG (HDMF)**, and **BIR TRAIN Law** withholding tax, with CSV payroll register export, printable A4 accounting summary, and self-service payslip release.
+4. **Verifiable HR Documents & QR Verification (`apps/api/src/documents`, `/documents`, `/verify/[code]`):**
+   - COE, COE with Compensation, Leave Certification, and Certified Payslip issuance with HR e-signature rendering, offline `.html` save, and public QR verification (`/verify/[code]`).
+5. **Cloud Object Storage (`apps/api/src/storage`, `/profile`, `/leave/new`):**
+   - Magic-byte validated uploads (`JPEG`, `PNG`, `WEBP`, `PDF`) via Supabase Storage REST (`sb_secret_` & legacy JWT support) or local disk fallback, with tenant-prefix enforcement (`tenants/<tenantId>/...`) on protected downloads.
+6. **External APIs & Security Hardening (`apps/api/src/settings`, `apps/api/src/notifications`, `apps/api/src/auth`):**
+   - **Nager.Date API** Philippine holiday preview/sync, **Gmail SMTP (Nodemailer)** + **Resend** fallback notifications, `helmet()`, `compression()`, `@nestjs/throttler`, Express `trust proxy`, fail-closed production JWT secrets, Next.js security headers (`CSP`, `X-Frame-Options`, `nosniff`), and immutable audit logging.
 
 ---
 
-## 🧪 Testing & Verification
+## Deployment & CI/CD (`$0` Capstone Stack)
+- **Web (`apps/web`):** Deploy on **Vercel** (`apps/web/vercel.json`) with server env var `API_URL` pointing to your backend origin (`/api/*` proxies cleanly to keep `SameSite=Lax` refresh cookies same-origin).
+- **API (`apps/api`):** Deploy containerized via `apps/api/Dockerfile` and `render.yaml` on **Render** (`healthCheckPath: /health`).
+- **Database & Files:** **Supabase** PostgreSQL (run `apps/api/prisma/supabase-init.sql` once before `prisma migrate deploy`) + Supabase Storage bucket.
+- **GitHub Actions:** [.github/workflows/ci.yml](.github/workflows/ci.yml) runs API lint, TypeScript checks, unit tests, PostgreSQL 16 E2E tests, Next.js build, and Docker image build verification; [.github/workflows/cd.yml](.github/workflows/cd.yml) triggers Render deployment after CI passes on `main`.
 
-Run the comprehensive test suite across the monorepo:
+---
 
+## Testing & Verification
 ```bash
-# Run API Unit Tests (14 passed)
-pnpm --filter api test
+# API Unit Tests (16 suites, 76 tests passing)
+pnpm --filter api exec vitest run --configLoader native
 
-# Run API End-to-End Tests (70 passed across 11 test suites)
-pnpm --filter api test:e2e
+# Web Proxy Utility Tests (3 tests passing)
+node --test apps/web/lib/proxy-url.test.ts
 
-# Run Web Next.js Production Build (17 routes verified)
+# Typechecks
+pnpm --filter api exec tsc --noEmit --incremental false -p tsconfig.build.json
+pnpm --filter web exec tsc --noEmit --incremental false
+
+# API Lint & Production Builds
+pnpm --filter api lint
+pnpm --filter api build
 pnpm --filter web build
+
+# API E2E Suite (requires local/CI PostgreSQL on localhost:5432 with hrms_test migrated)
+pnpm --filter api exec vitest run --config ./vitest.config.e2e.ts --configLoader native
 ```
 
 ---
 
-## 📄 Documentation Links
-- [System Architecture & Specifications](file:///C:/HumanResources-Management-System/ARCHITECTURE.md)
-- [5-Minute Capstone Demo Presentation Script](file:///C:/HumanResources-Management-System/docs/demo-script.md)
-- [Architecture Decision Records (ADRs)](file:///C:/HumanResources-Management-System/docs/decisions/)
+## Documentation Links
+- [Complete Project Documentation Soft Copy](docs/DocumentationSCopy.md)
+- [System Architecture & Technical Specifications](ARCHITECTURE.md)
+- [5-Minute Capstone Demo Script](docs/demo-script.md)
+- [Architecture Decision Records (ADRs)](docs/decisions/)
+- [Specs & Implementation Plans](docs/superpowers/)

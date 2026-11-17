@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
+import { StorageService } from '../storage/storage.service.js';
 import { AuthUser, hasPermission } from '../auth/permissions.js';
 import { CreateEmployeeDto } from './dto/create-employee.dto.js';
 import { UpdateEmployeeDto } from './dto/update-employee.dto.js';
@@ -23,7 +24,26 @@ export class EmployeesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly storageService: StorageService,
   ) {}
+
+  private canViewCompensation(user: AuthUser, employeeId: string): boolean {
+    return (
+      employeeId === user.employeeId ||
+      hasPermission(user, 'employee.write') ||
+      hasPermission(user, 'payroll.view.all')
+    );
+  }
+
+  private redactCompensationIfUnauthorized<
+    T extends { id: string; basicSalary?: unknown; allowances?: unknown },
+  >(user: AuthUser, record: T): T {
+    if (this.canViewCompensation(user, record.id)) {
+      return record;
+    }
+    const { basicSalary: _basicSalary, allowances: _allowances, ...safe } = record;
+    return safe as T;
+  }
 
   async listEmployees(
     user: AuthUser,
@@ -95,7 +115,7 @@ export class EmployeesService {
       ]);
 
       return {
-        data,
+        data: data.map((row) => this.redactCompensationIfUnauthorized(user, row)),
         total,
         page,
         pageSize,
@@ -132,7 +152,7 @@ export class EmployeesService {
         throw new NotFoundException('Employee not found');
       }
 
-      return employee;
+      return this.redactCompensationIfUnauthorized(user, employee);
     });
   }
 
@@ -501,7 +521,8 @@ export class EmployeesService {
   }
 
   async updateProfile(user: AuthUser, dto: UpdateProfileDto) {
-    return this.prisma.withTenant(user.tenantId, async (tx) => {
+    let previousKeyToDelete: string | null = null;
+    const updated = await this.prisma.withTenant(user.tenantId, async (tx) => {
       const existing = await tx.employee.findFirst({
         where: { id: user.employeeId, tenantId: user.tenantId },
       });
@@ -513,9 +534,16 @@ export class EmployeesService {
       const data: any = {};
       if (dto.phone !== undefined) data.phone = dto.phone?.trim() || null;
       if (dto.address !== undefined) data.address = dto.address?.trim() || null;
-      if (dto.avatarUrl !== undefined) data.avatarUrl = dto.avatarUrl?.trim() || null;
+      if (dto.avatarUrl !== undefined) {
+        const nextUrl = dto.avatarUrl?.trim() || null;
+        data.avatarUrl = nextUrl;
+        if (!nextUrl && existing.avatarKey) {
+          data.avatarKey = null;
+          previousKeyToDelete = existing.avatarKey;
+        }
+      }
 
-      const updated = await tx.employee.update({
+      const nextEmployee = await tx.employee.update({
         where: { id: user.employeeId },
         data,
         include: {
@@ -532,10 +560,125 @@ export class EmployeesService {
         entity: 'Employee',
         entityId: user.employeeId,
         before: { phone: existing.phone, address: existing.address, hasAvatar: !!existing.avatarUrl },
-        after: { phone: updated.phone, address: updated.address, hasAvatar: !!updated.avatarUrl },
+        after: { phone: nextEmployee.phone, address: nextEmployee.address, hasAvatar: !!nextEmployee.avatarUrl },
       });
 
-      return updated;
+      return nextEmployee;
     });
+
+    if (previousKeyToDelete) {
+      await this.storageService.deleteObject(previousKeyToDelete).catch(() => undefined);
+    }
+
+    return updated;
+  }
+
+  async uploadAvatar(user: AuthUser, file?: Express.Multer.File) {
+    if (!file?.buffer) {
+      throw new BadRequestException('Avatar file is required');
+    }
+
+    const uploaded = await this.storageService.uploadFile({
+      tenantId: user.tenantId,
+      category: 'avatar',
+      buffer: file.buffer,
+      mimeType: file.mimetype,
+      originalName: file.originalname || 'avatar',
+    });
+
+    let previousKey: string | null = null;
+    try {
+      const updated = await this.prisma.withTenant(user.tenantId, async (tx) => {
+        const existing = await tx.employee.findFirst({
+          where: { id: user.employeeId, tenantId: user.tenantId },
+        });
+
+        if (!existing) {
+          throw new NotFoundException('Employee profile not found');
+        }
+
+        previousKey = existing.avatarKey ?? null;
+
+        const nextEmployee = await tx.employee.update({
+          where: { id: user.employeeId },
+          data: {
+            avatarUrl: uploaded.url,
+            avatarKey: uploaded.key,
+          },
+          include: {
+            user: { select: { id: true, email: true, roles: true, active: true } },
+            department: true,
+            manager: true,
+          },
+        });
+
+        await this.auditService.record(tx, {
+          tenantId: user.tenantId,
+          actorId: user.userId,
+          action: 'uploadAvatar',
+          entity: 'Employee',
+          entityId: user.employeeId,
+          before: { avatarUrl: existing.avatarUrl, avatarKey: existing.avatarKey },
+          after: { avatarUrl: nextEmployee.avatarUrl, avatarKey: nextEmployee.avatarKey },
+        });
+
+        return nextEmployee;
+      });
+
+      if (previousKey && previousKey !== uploaded.key) {
+        await this.storageService.deleteObject(previousKey).catch(() => undefined);
+      }
+
+      return updated;
+    } catch (err) {
+      await this.storageService.deleteObject(uploaded.key).catch(() => undefined);
+      throw err;
+    }
+  }
+
+  async removeAvatar(user: AuthUser) {
+    let previousKey: string | null = null;
+    const updated = await this.prisma.withTenant(user.tenantId, async (tx) => {
+      const existing = await tx.employee.findFirst({
+        where: { id: user.employeeId, tenantId: user.tenantId },
+      });
+
+      if (!existing) {
+        throw new NotFoundException('Employee profile not found');
+      }
+
+      previousKey = existing.avatarKey ?? null;
+
+      const nextEmployee = await tx.employee.update({
+        where: { id: user.employeeId },
+        data: {
+          avatarUrl: null,
+          avatarKey: null,
+        },
+        include: {
+          user: { select: { id: true, email: true, roles: true, active: true } },
+          department: true,
+          manager: true,
+        },
+      });
+
+      await this.auditService.record(tx, {
+        tenantId: user.tenantId,
+        actorId: user.userId,
+        action: 'removeAvatar',
+        entity: 'Employee',
+        entityId: user.employeeId,
+        before: { avatarUrl: existing.avatarUrl, avatarKey: existing.avatarKey },
+        after: { avatarUrl: null, avatarKey: null },
+      });
+
+      return nextEmployee;
+    });
+
+    if (previousKey) {
+      await this.storageService.deleteObject(previousKey).catch(() => undefined);
+    }
+
+    return updated;
   }
 }

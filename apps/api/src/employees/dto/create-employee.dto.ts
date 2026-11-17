@@ -63,7 +63,7 @@ export class CreateEmployeeDto {
   @IsIn(['MALE', 'FEMALE'])
   gender!: Gender;
 
-  @IsIn(['SINGLE', 'MARRIED', 'WIDOWED', 'DIVORCED'])
+  @IsIn(['SINGLE', 'MARRIED', 'WIDOWED', 'SEPARATED'])
   maritalStatus!: MaritalStatus;
 
   @IsOptional()

@@ -145,38 +145,38 @@ export default function LoginPage() {
             <div className="grid grid-cols-2 gap-2 text-xs">
               <button
                 type="button"
-                onClick={() => handleDemoFill('employee@acme.test')}
+                onClick={() => handleDemoFill('employee@acgt.test')}
                 className="p-2 text-left rounded border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
               >
                 <div className="font-semibold">Employee</div>
-                <div className="text-[10px] text-neutral-500 truncate">employee@acme.test</div>
+                <div className="text-[10px] text-neutral-500 truncate">employee@acgt.test</div>
               </button>
 
               <button
                 type="button"
-                onClick={() => handleDemoFill('manager@acme.test')}
+                onClick={() => handleDemoFill('manager@acgt.test')}
                 className="p-2 text-left rounded border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
               >
                 <div className="font-semibold">Manager</div>
-                <div className="text-[10px] text-neutral-500 truncate">manager@acme.test</div>
+                <div className="text-[10px] text-neutral-500 truncate">manager@acgt.test</div>
               </button>
 
               <button
                 type="button"
-                onClick={() => handleDemoFill('hr@acme.test')}
+                onClick={() => handleDemoFill('hr@acgt.test')}
                 className="p-2 text-left rounded border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
               >
                 <div className="font-semibold">HR Officer</div>
-                <div className="text-[10px] text-neutral-500 truncate">hr@acme.test</div>
+                <div className="text-[10px] text-neutral-500 truncate">hr@acgt.test</div>
               </button>
 
               <button
                 type="button"
-                onClick={() => handleDemoFill('admin@acme.test')}
+                onClick={() => handleDemoFill('admin@acgt.test')}
                 className="p-2 text-left rounded border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
               >
                 <div className="font-semibold">Company Admin</div>
-                <div className="text-[10px] text-neutral-500 truncate">admin@acme.test</div>
+                <div className="text-[10px] text-neutral-500 truncate">admin@acgt.test</div>
               </button>
             </div>
           </div>

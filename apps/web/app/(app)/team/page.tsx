@@ -4,7 +4,19 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
-import { Users, Loader2, AlertCircle, CalendarDays, ArrowRight } from 'lucide-react';
+import {
+  SendEmailModal,
+  type EmailRecipientTarget,
+} from '@/components/send-email-modal';
+import {
+  Users,
+  Loader2,
+  AlertCircle,
+  CalendarDays,
+  ArrowRight,
+  Mail,
+  CheckCircle,
+} from 'lucide-react';
 
 interface DirectReport {
   id: string;
@@ -24,10 +36,12 @@ interface DirectReport {
 }
 
 export default function TeamPage() {
-  const { user } = useAuth();
+  const { can } = useAuth();
   const [team, setTeam] = useState<DirectReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [emailTarget, setEmailTarget] = useState<EmailRecipientTarget | null>(null);
+  const [emailNotice, setEmailNotice] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadTeam() {
@@ -61,6 +75,21 @@ export default function TeamPage() {
           Direct reports reporting to you. View contact details, roles, and status.
         </p>
       </div>
+
+      {emailNotice && (
+        <div className="p-4 rounded-md border border-neutral-900 bg-neutral-900 text-white dark:border-neutral-100 dark:bg-neutral-100 dark:text-black text-xs flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 shrink-0" />
+            <span>{emailNotice}</span>
+          </div>
+          <button
+            onClick={() => setEmailNotice(null)}
+            className="underline hover:opacity-80 shrink-0"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {error && (
         <div className="p-4 rounded-md border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-sm flex items-start gap-3">
@@ -144,12 +173,31 @@ export default function TeamPage() {
                     </td>
 
                     <td className="px-5 py-4 whitespace-nowrap text-right">
-                      <Link
-                        href={`/employees/${member.id}`}
-                        className="font-medium text-xs text-neutral-900 dark:text-neutral-100 hover:underline"
-                      >
-                        Profile →
-                      </Link>
+                      <div className="inline-flex items-center gap-3">
+                        {(can('email.send_team') || can('email.send')) && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setEmailTarget({
+                                employeeId: member.id,
+                                name: `${member.firstName} ${member.lastName}`,
+                                email: member.user?.email,
+                              })
+                            }
+                            className="inline-flex items-center gap-1 text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white transition-colors"
+                            title="Send Email or Meeting Invite"
+                          >
+                            <Mail className="w-3.5 h-3.5" />
+                            Email
+                          </button>
+                        )}
+                        <Link
+                          href={`/employees/${member.id}`}
+                          className="font-medium text-xs text-neutral-900 dark:text-neutral-100 hover:underline"
+                        >
+                          Profile →
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -158,6 +206,12 @@ export default function TeamPage() {
           </div>
         )}
       </div>
+
+      <SendEmailModal
+        recipient={emailTarget}
+        onClose={() => setEmailTarget(null)}
+        onSent={(msg) => setEmailNotice(msg)}
+      />
     </div>
   );
 }

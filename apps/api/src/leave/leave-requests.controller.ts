@@ -8,7 +8,10 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { LeaveRequestsService } from './leave-requests.service.js';
 import { BalancesService } from './balances.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -46,6 +49,21 @@ export class LeaveRequestsController {
     return this.prisma.withTenant(user.tenantId, (tx) =>
       this.balancesService.summary(tx, user.tenantId, user.employeeId, year),
     );
+  }
+
+  @RequirePermission('leave.file')
+  @Post('attachments')
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  async uploadAttachment(
+    @CurrentUser() user: AuthUser,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.leaveRequestsService.uploadAttachment(user, file);
   }
 
   @RequirePermission('leave.file')

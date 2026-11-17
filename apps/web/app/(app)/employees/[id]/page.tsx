@@ -497,7 +497,7 @@ export default function EmployeeDetailPage() {
                 <option value="SINGLE">Single</option>
                 <option value="MARRIED">Married</option>
                 <option value="WIDOWED">Widowed</option>
-                <option value="DIVORCED">Divorced</option>
+                <option value="SEPARATED">Separated</option>
               </select>
             </div>
           </div>

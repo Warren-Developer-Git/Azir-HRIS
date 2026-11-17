@@ -41,9 +41,9 @@ describe('Balances API (e2e)', () => {
       return res.body.accessToken;
     }
 
-    adminToken = await getToken('admin@acme.test');
-    hrToken = await getToken('hr@acme.test');
-    employeeToken = await getToken('employee@acme.test');
+    adminToken = await getToken('admin@acgt.test');
+    hrToken = await getToken('hr@acgt.test');
+    employeeToken = await getToken('employee@acgt.test');
 
     // Get employee details
     const empRes = await request(app.getHttpServer())
@@ -105,8 +105,8 @@ describe('Balances API (e2e)', () => {
         .post('/employees')
         .set('Authorization', `Bearer ${hrToken}`)
         .send({
-          email: 'newbie@acme.test',
-          employeeNo: 'ACM-099',
+          email: 'newbie@acgt.test',
+          employeeNo: 'ACGT-099',
           firstName: 'New',
           lastName: 'Hire',
           position: 'Junior Dev',

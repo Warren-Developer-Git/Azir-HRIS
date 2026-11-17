@@ -15,6 +15,18 @@ export type Permission =
   | 'document.request'
   | 'document.approve'
   | 'document.approve.compensation'
+  | 'payroll.manage'
+  | 'payroll.approve'
+  | 'payroll.view.all'
+  | 'payroll.view.own'
+  | 'attendance.punch'
+  | 'attendance.view.own'
+  | 'attendance.correct'
+  | 'attendance.approve'
+  | 'attendance.view.all'
+  | 'attendance.manage'
+  | 'email.send'
+  | 'email.send_team'
   | 'audit.read';
 
 export interface AuthUser {
@@ -37,6 +49,17 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'document.request',
     'document.approve',
     'document.approve.compensation',
+    'payroll.manage',
+    'payroll.approve',
+    'payroll.view.all',
+    'payroll.view.own',
+    'attendance.punch',
+    'attendance.view.own',
+    'attendance.correct',
+    'attendance.approve',
+    'attendance.view.all',
+    'attendance.manage',
+    'email.send',
     'audit.read',
   ],
   HR: [
@@ -47,10 +70,38 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'document.request',
     'document.approve',
     'document.approve.compensation',
+    'payroll.manage',
+    'payroll.approve',
+    'payroll.view.all',
+    'payroll.view.own',
+    'attendance.punch',
+    'attendance.view.own',
+    'attendance.correct',
+    'attendance.approve',
+    'attendance.view.all',
+    'attendance.manage',
+    'email.send',
     'audit.read',
   ],
-  MANAGER: ['team.read', 'leave.approve.manager', 'document.request'],
-  EMPLOYEE: ['leave.file', 'document.request'],
+  MANAGER: [
+    'team.read',
+    'leave.approve.manager',
+    'document.request',
+    'payroll.view.own',
+    'attendance.punch',
+    'attendance.view.own',
+    'attendance.correct',
+    'attendance.approve',
+    'email.send_team',
+  ],
+  EMPLOYEE: [
+    'leave.file',
+    'document.request',
+    'payroll.view.own',
+    'attendance.punch',
+    'attendance.view.own',
+    'attendance.correct',
+  ],
 };
 
 export function hasPermission(user: AuthUser, permission: Permission): boolean {

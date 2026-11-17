@@ -30,7 +30,7 @@ export async function resetAndSeedTestDb(ownerDb: PrismaClient) {
   const passwordHash = bcrypt.hashSync('Demo1234!', 10);
 
   // Tenant Acme
-  const acme = await ownerDb.tenant.create({ data: { name: 'Acme Manila Corp' } });
+  const acme = await ownerDb.tenant.create({ data: { name: 'Azir Company Global Tech' } });
   const acmeEng = await ownerDb.department.create({ data: { tenantId: acme.id, name: 'Engineering' } });
   const acmeHr = await ownerDb.department.create({ data: { tenantId: acme.id, name: 'Human Resources' } });
 
@@ -192,9 +192,9 @@ export async function resetAndSeedTestDb(ownerDb: PrismaClient) {
   }
 
   const depthead = await addEmp({
-    email: 'depthead@acme.test',
+    email: 'depthead@acgt.test',
     roles: ['MANAGER', 'EMPLOYEE'],
-    employeeNo: 'ACM-001',
+    employeeNo: 'ACGT-001',
     firstName: 'Eduardo',
     lastName: 'Santos',
     departmentId: acmeEng.id,
@@ -204,9 +204,9 @@ export async function resetAndSeedTestDb(ownerDb: PrismaClient) {
   });
 
   const admin = await addEmp({
-    email: 'admin@acme.test',
+    email: 'admin@acgt.test',
     roles: ['ADMIN', 'EMPLOYEE'],
-    employeeNo: 'ACM-002',
+    employeeNo: 'ACGT-002',
     firstName: 'Alejandro',
     lastName: 'Reyes',
     departmentId: acmeEng.id,
@@ -217,9 +217,9 @@ export async function resetAndSeedTestDb(ownerDb: PrismaClient) {
   });
 
   const hr = await addEmp({
-    email: 'hr@acme.test',
+    email: 'hr@acgt.test',
     roles: ['HR', 'EMPLOYEE'],
-    employeeNo: 'ACM-003',
+    employeeNo: 'ACGT-003',
     firstName: 'Maria',
     lastName: 'Clara',
     departmentId: acmeHr.id,
@@ -230,9 +230,9 @@ export async function resetAndSeedTestDb(ownerDb: PrismaClient) {
   });
 
   const hr2 = await addEmp({
-    email: 'hr2@acme.test',
+    email: 'hr2@acgt.test',
     roles: ['HR', 'EMPLOYEE'],
-    employeeNo: 'ACM-004',
+    employeeNo: 'ACGT-004',
     firstName: 'Corazon',
     lastName: 'Aquino',
     departmentId: acmeHr.id,
@@ -243,9 +243,9 @@ export async function resetAndSeedTestDb(ownerDb: PrismaClient) {
   });
 
   const manager = await addEmp({
-    email: 'manager@acme.test',
+    email: 'manager@acgt.test',
     roles: ['MANAGER', 'EMPLOYEE'],
-    employeeNo: 'ACM-005',
+    employeeNo: 'ACGT-005',
     firstName: 'Manuel',
     lastName: 'Quezon',
     departmentId: acmeEng.id,
@@ -256,9 +256,9 @@ export async function resetAndSeedTestDb(ownerDb: PrismaClient) {
   });
 
   const employee = await addEmp({
-    email: 'employee@acme.test',
+    email: 'employee@acgt.test',
     roles: ['EMPLOYEE'],
-    employeeNo: 'ACM-006',
+    employeeNo: 'ACGT-006',
     firstName: 'Gabriela',
     lastName: 'Silang',
     departmentId: acmeEng.id,
@@ -269,9 +269,9 @@ export async function resetAndSeedTestDb(ownerDb: PrismaClient) {
   });
 
   const dev1 = await addEmp({
-    email: 'dev1@acme.test',
+    email: 'dev1@acgt.test',
     roles: ['EMPLOYEE'],
-    employeeNo: 'ACM-007',
+    employeeNo: 'ACGT-007',
     firstName: 'Jose',
     lastName: 'Rizal',
     departmentId: acmeEng.id,
@@ -362,6 +362,19 @@ export async function resetAndSeedTestDb(ownerDb: PrismaClient) {
     });
   }
 
+  // Payroll Period for Acme
+  const defaultPeriod = await ownerDb.payrollPeriod.create({
+    data: {
+      tenantId: acme.id,
+      name: 'November 2026 - First Half',
+      cutoffType: 'FIRST_HALF',
+      startDate: new Date('2026-11-01'),
+      endDate: new Date('2026-11-15'),
+      payDate: new Date('2026-11-15'),
+      workingDays: 10,
+    },
+  });
+
   return {
     acme,
     depthead,
@@ -372,5 +385,6 @@ export async function resetAndSeedTestDb(ownerDb: PrismaClient) {
     employee,
     dev1,
     leaveTypes: { sil, vl, sl, mat, pat },
+    payrollPeriod: defaultPeriod,
   };
 }

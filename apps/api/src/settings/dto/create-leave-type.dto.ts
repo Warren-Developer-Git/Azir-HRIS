@@ -32,7 +32,7 @@ export class CreateLeaveTypeDto {
   eligibleGender?: Gender;
 
   @IsOptional()
-  @IsIn(['SINGLE', 'MARRIED', 'WIDOWED', 'DIVORCED'])
+  @IsIn(['SINGLE', 'MARRIED', 'WIDOWED', 'SEPARATED'])
   eligibleMaritalStatus?: MaritalStatus;
 
   @IsOptional()

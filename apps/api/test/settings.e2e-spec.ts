@@ -5,6 +5,7 @@ import { App } from 'supertest/types.js';
 import cookieParser from 'cookie-parser';
 import { describe, beforeAll, afterAll, it, expect } from 'vitest';
 import { AppModule } from '../src/app.module.js';
+import { PublicHolidayApiService } from '../src/settings/public-holiday-api.service.js';
 import { createOwnerPrisma, resetAndSeedTestDb } from './helpers.js';
 import { PrismaClient } from '@prisma/client';
 
@@ -23,7 +24,37 @@ describe('Settings API (e2e)', () => {
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(PublicHolidayApiService)
+      .useValue({
+        fetchPublicHolidays: async (year: number, countryCode = 'PH') => [
+          {
+            date: `${year}-01-01`,
+            name: "New Year's Day",
+            localName: 'Bagong Taon',
+            countryCode,
+            global: true,
+            types: ['Public'],
+          },
+          {
+            date: `${year}-02-17`,
+            name: 'Chinese New Year',
+            localName: 'Chinese New Year',
+            countryCode,
+            global: true,
+            types: ['Public'],
+          },
+          {
+            date: `${year}-12-25`,
+            name: 'Christmas Day',
+            localName: 'Araw ng Pasko',
+            countryCode,
+            global: true,
+            types: ['Public'],
+          },
+        ],
+      })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     app.use(cookieParser());
@@ -39,9 +70,9 @@ describe('Settings API (e2e)', () => {
       return res.body.accessToken;
     }
 
-    adminToken = await getToken('admin@acme.test');
-    hrToken = await getToken('hr@acme.test');
-    employeeToken = await getToken('employee@acme.test');
+    adminToken = await getToken('admin@acgt.test');
+    hrToken = await getToken('hr@acgt.test');
+    employeeToken = await getToken('employee@acgt.test');
 
     const deptsRes = await request(app.getHttpServer())
       .get('/departments')
@@ -235,6 +266,56 @@ describe('Settings API (e2e)', () => {
 
       expect(delRes.status).toBe(200);
       expect(delRes.body.deleted).toBe(true);
+    });
+
+    it('rejects malformed query parameters on GET /holidays/external-preview with 400', async () => {
+      const badYearRes = await request(app.getHttpServer())
+        .get('/holidays/external-preview?year=2026abc&countryCode=PH')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(badYearRes.status).toBe(400);
+
+      const badCountryRes = await request(app.getHttpServer())
+        .get('/holidays/external-preview?year=2026&countryCode=PH1')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(badCountryRes.status).toBe(400);
+    });
+
+    it('syncs external holidays idempotently and enforces RBAC', async () => {
+      const forbiddenRes = await request(app.getHttpServer())
+        .post('/holidays/sync')
+        .set('Authorization', `Bearer ${employeeToken}`)
+        .send({ year: 2026, countryCode: 'PH' });
+
+      expect(forbiddenRes.status).toBe(403);
+
+      const previewRes = await request(app.getHttpServer())
+        .get('/holidays/external-preview?year=2026&countryCode=PH')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(previewRes.status).toBe(200);
+      expect(previewRes.body.source).toBe('Nager.Date Public Holidays API');
+      expect(previewRes.body.count).toBe(3);
+
+      const firstSyncRes = await request(app.getHttpServer())
+        .post('/holidays/sync')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ year: 2026, countryCode: 'PH' });
+
+      expect(firstSyncRes.status).toBe(200);
+      expect(firstSyncRes.body.source).toBe('Nager.Date Public Holidays API');
+      expect(firstSyncRes.body.fetchedCount).toBe(3);
+      expect(firstSyncRes.body.createdCount).toBeGreaterThanOrEqual(1);
+
+      const secondSyncRes = await request(app.getHttpServer())
+        .post('/holidays/sync')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ year: 2026, countryCode: 'PH' });
+
+      expect(secondSyncRes.status).toBe(200);
+      expect(secondSyncRes.body.createdCount).toBe(0);
+      expect(secondSyncRes.body.skippedCount).toBe(3);
     });
   });
 });

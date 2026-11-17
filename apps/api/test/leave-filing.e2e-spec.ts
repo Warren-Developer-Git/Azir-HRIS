@@ -57,10 +57,10 @@ describe('Leave Filing & Balances (e2e)', () => {
       return res.body.accessToken;
     }
 
-    employeeToken = await getToken('employee@acme.test');
-    deptHeadToken = await getToken('depthead@acme.test');
-    managerToken = await getToken('manager@acme.test');
-    hrToken = await getToken('hr@acme.test');
+    employeeToken = await getToken('employee@acgt.test');
+    deptHeadToken = await getToken('depthead@acgt.test');
+    managerToken = await getToken('manager@acgt.test');
+    hrToken = await getToken('hr@acgt.test');
 
     // Fetch leave types
     const typesRes = await request(app.getHttpServer())
@@ -356,7 +356,7 @@ describe('Leave Filing & Balances (e2e)', () => {
     // Colleague (dev1) trying to view employee's private request
     const dev1Token = await request(app.getHttpServer())
       .post('/auth/login')
-      .send({ email: 'dev1@acme.test', password: 'Demo1234!' })
+      .send({ email: 'dev1@acgt.test', password: 'Demo1234!' })
       .then((r) => r.body.accessToken);
 
     const colleagueRes = await request(app.getHttpServer())

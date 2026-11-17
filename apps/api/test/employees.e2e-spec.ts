@@ -40,14 +40,14 @@ describe('Employees API (e2e)', () => {
       return res.body.accessToken;
     }
 
-    adminToken = await getToken('admin@acme.test');
-    hrToken = await getToken('hr@acme.test');
-    managerToken = await getToken('manager@acme.test');
-    employeeToken = await getToken('employee@acme.test');
+    adminToken = await getToken('admin@acgt.test');
+    hrToken = await getToken('hr@acgt.test');
+    managerToken = await getToken('manager@acgt.test');
+    employeeToken = await getToken('employee@acgt.test');
     bayanihanHrToken = await getToken('hr@bayanihan.test');
 
     const empUser = await ownerDb.user.findUnique({
-      where: { email: 'employee@acme.test' },
+      where: { email: 'employee@acgt.test' },
       include: { employee: true },
     });
     employeeId = empUser!.employee!.id;
@@ -65,8 +65,8 @@ describe('Employees API (e2e)', () => {
       .send({
         firstName: 'Jose',
         lastName: 'Rizal',
-        email: 'jose.rizal@acme.test',
-        employeeNo: 'ACM-099',
+        email: 'jose.rizal@acgt.test',
+        employeeNo: 'ACGT-099',
         position: 'Software Engineer',
         hireDate: '2026-01-15',
         gender: 'MALE',
@@ -82,7 +82,7 @@ describe('Employees API (e2e)', () => {
     const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({
-        email: 'jose.rizal@acme.test',
+        email: 'jose.rizal@acgt.test',
         password: res.body.temporaryPassword,
       });
 
@@ -97,8 +97,8 @@ describe('Employees API (e2e)', () => {
       .send({
         firstName: 'Duplicate',
         lastName: 'Email',
-        email: 'employee@acme.test',
-        employeeNo: 'ACM-100',
+        email: 'employee@acgt.test',
+        employeeNo: 'ACGT-100',
         position: 'Staff',
         hireDate: '2026-02-01',
         gender: 'MALE',
@@ -116,8 +116,8 @@ describe('Employees API (e2e)', () => {
       .send({
         firstName: 'Duplicate',
         lastName: 'Number',
-        email: 'unique.number@acme.test',
-        employeeNo: 'ACM-001',
+        email: 'unique.number@acgt.test',
+        employeeNo: 'ACGT-001',
         position: 'Staff',
         hireDate: '2026-02-01',
         gender: 'MALE',
@@ -135,8 +135,8 @@ describe('Employees API (e2e)', () => {
       .send({
         firstName: 'Privileged',
         lastName: 'User',
-        email: 'priv@acme.test',
-        employeeNo: 'ACM-101',
+        email: 'priv@acgt.test',
+        employeeNo: 'ACGT-101',
         position: 'Staff',
         hireDate: '2026-02-01',
         gender: 'MALE',
@@ -189,7 +189,7 @@ describe('Employees API (e2e)', () => {
     // Deactivated user cannot log in
     const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
-      .send({ email: 'employee@acme.test', password: 'Demo1234!' });
+      .send({ email: 'employee@acgt.test', password: 'Demo1234!' });
 
     expect(loginRes.status).toBe(401);
   });
@@ -229,7 +229,7 @@ describe('Employees API (e2e)', () => {
       data: { status: 'ACTIVE' },
     });
     await ownerDb.user.updateMany({
-      where: { email: 'employee@acme.test' },
+      where: { email: 'employee@acgt.test' },
       data: { active: true },
     });
 
@@ -243,7 +243,7 @@ describe('Employees API (e2e)', () => {
     const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({
-        email: 'employee@acme.test',
+        email: 'employee@acgt.test',
         password: resetRes.body.temporaryPassword,
       });
 

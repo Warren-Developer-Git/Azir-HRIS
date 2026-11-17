@@ -7,6 +7,7 @@ import { LeaveTypesController } from './leave-types.controller.js';
 import { LeaveTypesService } from './leave-types.service.js';
 import { HolidaysController } from './holidays.controller.js';
 import { HolidaysService } from './holidays.service.js';
+import { PublicHolidayApiService } from './public-holiday-api.service.js';
 import { SettingsReadController } from './settings-read.controller.js';
 
 @Module({
@@ -21,11 +22,13 @@ import { SettingsReadController } from './settings-read.controller.js';
     DepartmentsService,
     LeaveTypesService,
     HolidaysService,
+    PublicHolidayApiService,
   ],
   exports: [
     DepartmentsService,
     LeaveTypesService,
     HolidaysService,
+    PublicHolidayApiService,
   ],
 })
 export class SettingsModule {}

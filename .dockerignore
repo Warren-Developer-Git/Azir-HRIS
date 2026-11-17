@@ -1,0 +1,14 @@
+.git
+.gitignore
+.superpowers
+docs
+coverage
+.turbo
+**/node_modules
+**/.next
+**/dist
+**/*.tsbuildinfo
+**/.env
+**/.env.*
+!**/.env.example
+apps/api/uploads

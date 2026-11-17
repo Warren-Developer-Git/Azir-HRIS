@@ -1,18 +1,17 @@
+import { existsSync } from 'node:fs';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
-import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module.js';
+import { configureApp } from './app.setup.js';
+
+if (existsSync('.env')) {
+  process.loadEnvFile('.env');
+} else if (existsSync('apps/api/.env')) {
+  process.loadEnvFile('apps/api/.env');
+}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.use(cookieParser());
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  );
+  configureApp(app);
   await app.listen(process.env.PORT ?? 4000);
 }
 await bootstrap();

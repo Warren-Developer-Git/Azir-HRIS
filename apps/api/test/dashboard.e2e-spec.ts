@@ -37,9 +37,9 @@ describe('Dashboard API (e2e)', () => {
       return res.body.accessToken;
     }
 
-    employeeToken = await getToken('employee@acme.test');
-    managerToken = await getToken('manager@acme.test');
-    hrToken = await getToken('hr@acme.test');
+    employeeToken = await getToken('employee@acgt.test');
+    managerToken = await getToken('manager@acgt.test');
+    hrToken = await getToken('hr@acgt.test');
 
     // Employee files a request so manager has an awaiting request
     const typesRes = await request(app.getHttpServer())

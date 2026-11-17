@@ -105,9 +105,17 @@ export default function ProfilePage() {
     setIsUploadingPhoto(true);
 
     const reader = new FileReader();
+    reader.onerror = () => {
+      setPhotoError('Failed to read selected image file.');
+      setIsUploadingPhoto(false);
+    };
     reader.onload = (event) => {
       const img = new Image();
-      img.onload = async () => {
+      img.onerror = () => {
+        setPhotoError('Unable to decode selected image file.');
+        setIsUploadingPhoto(false);
+      };
+      img.onload = () => {
         // Resize to 400x400 square crop via canvas
         const canvas = document.createElement('canvas');
         const size = 400;
@@ -125,22 +133,36 @@ export default function ProfilePage() {
         const sy = (img.height - minDim) / 2;
         ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
 
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        canvas.toBlob(
+          async (blob) => {
+            if (!blob) {
+              setPhotoError('Failed to encode profile image.');
+              setIsUploadingPhoto(false);
+              return;
+            }
 
-        try {
-          const updated = await api<MyProfile>('/me/profile', {
-            method: 'PATCH',
-            body: JSON.stringify({ avatarUrl: dataUrl }),
-          });
-          setProfile(updated);
-          setAvatarUrl(updated.avatarUrl || null);
-          setSuccess(true);
-          setTimeout(() => setSuccess(false), 3000);
-        } catch (err: any) {
-          setPhotoError(err instanceof ApiError ? err.message : 'Failed to save profile picture');
-        } finally {
-          setIsUploadingPhoto(false);
-        }
+            try {
+              const formData = new FormData();
+              formData.append('file', blob, 'avatar.jpg');
+              const updated = await api<MyProfile>('/me/avatar', {
+                method: 'POST',
+                body: formData,
+              });
+              setProfile(updated);
+              setAvatarUrl(updated.avatarUrl || null);
+              setSuccess(true);
+              setTimeout(() => setSuccess(false), 3000);
+            } catch (err: unknown) {
+              setPhotoError(
+                err instanceof ApiError ? err.message : 'Failed to upload profile picture',
+              );
+            } finally {
+              setIsUploadingPhoto(false);
+            }
+          },
+          'image/jpeg',
+          0.85,
+        );
       };
       img.src = event.target?.result as string;
     };
@@ -152,15 +174,14 @@ export default function ProfilePage() {
     setPhotoError(null);
     try {
       setIsUploadingPhoto(true);
-      const updated = await api<MyProfile>('/me/profile', {
-        method: 'PATCH',
-        body: JSON.stringify({ avatarUrl: null }),
+      const updated = await api<MyProfile>('/me/avatar', {
+        method: 'DELETE',
       });
       setProfile(updated);
       setAvatarUrl(null);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setPhotoError(err instanceof ApiError ? err.message : 'Failed to remove profile picture');
     } finally {
       setIsUploadingPhoto(false);

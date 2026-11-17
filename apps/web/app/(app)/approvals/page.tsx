@@ -17,6 +17,11 @@ import {
   ShieldCheck,
   UserCheck,
   Users,
+  CalendarDays,
+  Briefcase,
+  MapPin,
+  Check,
+  X,
 } from 'lucide-react';
 
 interface Approver {
@@ -68,6 +73,15 @@ export default function ApprovalsPage() {
   const [activeTab, setActiveTab] = useState<'awaiting' | 'all_pending'>('awaiting');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Approval category: 'leave' | 'attendance'
+  const [approvalCategory, setApprovalCategory] = useState<'leave' | 'attendance'>('leave');
+  const [attendanceRequests, setAttendanceRequests] = useState<any[]>([]);
+  const [isLoadingAttendance, setIsLoadingAttendance] = useState(false);
+  const [attendanceDecisionItem, setAttendanceDecisionItem] = useState<any | null>(null);
+  const [attendanceDecisionAction, setAttendanceDecisionAction] = useState<'APPROVE' | 'REJECT'>('APPROVE');
+  const [attendanceComment, setAttendanceComment] = useState('');
+  const [isSubmittingAttendanceDecision, setIsSubmittingAttendanceDecision] = useState(false);
 
   // Decision Modal State
   const [activeItem, setActiveItem] = useState<AwaitingLeaveRequest | null>(null);
@@ -128,6 +142,45 @@ export default function ApprovalsPage() {
     }
   };
 
+  const fetchAttendanceRequests = async () => {
+    if (!can('attendance.approve')) return;
+    try {
+      setIsLoadingAttendance(true);
+      const data = await api<any[]>('/attendance/corrections?scope=awaiting');
+      setAttendanceRequests(data);
+    } catch (err) {
+      console.error('Failed to fetch attendance corrections:', err);
+    } finally {
+      setIsLoadingAttendance(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAttendanceRequests();
+  }, []);
+
+  const handleAttendanceDecisionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!attendanceDecisionItem) return;
+    try {
+      setIsSubmittingAttendanceDecision(true);
+      await api(`/attendance/corrections/${attendanceDecisionItem.id}/decision`, {
+        method: 'POST',
+        body: JSON.stringify({
+          decision: attendanceDecisionAction,
+          comment: attendanceComment.trim() || undefined,
+        }),
+      });
+      setAttendanceDecisionItem(null);
+      setAttendanceComment('');
+      await fetchAttendanceRequests();
+    } catch (err: any) {
+      alert(err instanceof ApiError ? err.message : 'Failed to record decision');
+    } finally {
+      setIsSubmittingAttendanceDecision(false);
+    }
+  };
+
   const formatDate = (isoString: string) => {
     if (!isoString) return '';
     return new Date(isoString).toLocaleDateString('en-US', {
@@ -182,7 +235,44 @@ export default function ApprovalsPage() {
         )}
       </div>
 
-      {error && (
+      {/* Category Tabs: Leave vs Attendance & OB */}
+      <div className="flex items-center gap-2 border-b border-neutral-200 dark:border-neutral-800 pb-px">
+        <button
+          onClick={() => setApprovalCategory('leave')}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
+            approvalCategory === 'leave'
+              ? 'border-primary-600 text-primary-600 dark:border-primary-400 dark:text-primary-400'
+              : 'border-transparent text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200'
+          }`}
+        >
+          <CalendarDays className="w-4 h-4" /> Leave Requests
+          {requests.length > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200">
+              {requests.length}
+            </span>
+          )}
+        </button>
+
+        {can('attendance.approve') && (
+          <button
+            onClick={() => setApprovalCategory('attendance')}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
+              approvalCategory === 'attendance'
+                ? 'border-primary-600 text-primary-600 dark:border-primary-400 dark:text-primary-400'
+                : 'border-transparent text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200'
+            }`}
+          >
+            <Clock className="w-4 h-4" /> Attendance & OB Slips
+            {attendanceRequests.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500 text-white">
+                {attendanceRequests.length}
+              </span>
+            )}
+          </button>
+        )}
+      </div>
+
+      {approvalCategory === 'leave' && error && (
         <div className="p-4 rounded-md border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-sm flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-neutral-900 dark:text-neutral-100 shrink-0 mt-0.5" />
           <div className="flex-1">
@@ -196,8 +286,9 @@ export default function ApprovalsPage() {
         </div>
       )}
 
-      {/* Main Table Card */}
-      <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
+      {/* Main Table Card (Leave Requests) */}
+      {approvalCategory === 'leave' && (
+        <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
         {isLoading ? (
           <div className="p-12 flex flex-col items-center justify-center text-neutral-500">
             <Loader2 className="w-6 h-6 animate-spin mb-3" />
@@ -388,6 +479,160 @@ export default function ApprovalsPage() {
           </div>
         )}
       </div>
+      )}
+
+      {/* Attendance & OB Approvals View */}
+      {approvalCategory === 'attendance' && (
+        <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
+          {isLoadingAttendance ? (
+            <div className="p-12 flex flex-col items-center justify-center text-neutral-500">
+              <Loader2 className="w-6 h-6 animate-spin mb-3" />
+              <p className="text-sm">Loading pending attendance requests...</p>
+            </div>
+          ) : attendanceRequests.length === 0 ? (
+            <div className="p-12 text-center text-neutral-500">
+              <CheckSquare className="w-10 h-10 mx-auto mb-3 text-neutral-400" />
+              <h3 className="font-bold text-base text-neutral-900 dark:text-neutral-100">
+                All Caught Up!
+              </h3>
+              <p className="text-xs text-neutral-400 mt-1 max-w-sm mx-auto">
+                There are currently no official business slips or attendance correction requests awaiting your action.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-neutral-200 dark:divide-neutral-800">
+              {attendanceRequests.map((req) => (
+                <div
+                  key={req.id}
+                  className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-neutral-50/50 dark:hover:bg-neutral-800/40"
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2.5">
+                      <span className="font-semibold text-neutral-900 dark:text-neutral-100 text-sm">
+                        {req.employee?.firstName} {req.employee?.lastName}
+                      </span>
+                      <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                        ({req.employee?.position} • {req.employee?.department?.name || 'General'})
+                      </span>
+                      {req.type === 'OFFICIAL_BUSINESS' ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
+                          Official Business (OB) Slip
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                          Missed Punch Correction
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="text-xs text-neutral-600 dark:text-neutral-300 flex flex-wrap items-center gap-x-4 gap-y-1">
+                      <div>
+                        <span className="text-neutral-400">Date:</span> {formatDate(req.date)}
+                      </div>
+                      {req.type === 'OFFICIAL_BUSINESS' ? (
+                        <div>
+                          <span className="text-neutral-400">Destination:</span> {req.destination || 'Field Client Site'}
+                        </div>
+                      ) : (
+                        <div className="font-mono">
+                          <span className="text-neutral-400 font-sans">Proposed:</span> In {req.proposedTimeIn ? new Date(req.proposedTimeIn).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : '--'} → Out {req.proposedTimeOut ? new Date(req.proposedTimeOut).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : '--'}
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-neutral-400">Location:</span> {req.locationType}
+                      </div>
+                    </div>
+
+                    <div className="text-xs bg-neutral-50 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700/80 rounded-lg p-2.5 text-neutral-700 dark:text-neutral-300">
+                      <span className="font-semibold text-neutral-500 dark:text-neutral-400 mr-1.5">Reason:</span>
+                      {req.reason}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAttendanceDecisionItem(req);
+                        setAttendanceDecisionAction('APPROVE');
+                        setAttendanceComment('');
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all"
+                    >
+                      <Check className="w-3.5 h-3.5" /> Approve
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAttendanceDecisionItem(req);
+                        setAttendanceDecisionAction('REJECT');
+                        setAttendanceComment('');
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-sm transition-all"
+                    >
+                      <X className="w-3.5 h-3.5" /> Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Attendance Decision Modal */}
+      {attendanceDecisionItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <form
+            onSubmit={handleAttendanceDecisionSubmit}
+            className="max-w-md w-full rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 space-y-4 shadow-xl"
+          >
+            <div>
+              <h3 className="font-bold text-base text-neutral-900 dark:text-neutral-100">
+                {attendanceDecisionAction === 'APPROVE' ? 'Approve' : 'Reject'} Attendance Request
+              </h3>
+              <p className="text-xs text-neutral-500 mt-1">
+                {attendanceDecisionItem.employee?.firstName} {attendanceDecisionItem.employee?.lastName} • {attendanceDecisionItem.type === 'OFFICIAL_BUSINESS' ? 'OB Slip' : 'Missed Punch'} ({formatDate(attendanceDecisionItem.date)})
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                Comments / Decision Note (Optional)
+              </label>
+              <textarea
+                value={attendanceComment}
+                onChange={(e) => setAttendanceComment(e.target.value)}
+                rows={3}
+                placeholder="Add optional notes for the employee..."
+                className="w-full px-3 py-2 text-xs rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setAttendanceDecisionItem(null)}
+                className="px-3 py-1.5 text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmittingAttendanceDecision}
+                className={`inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded text-white ${
+                  attendanceDecisionAction === 'APPROVE'
+                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                    : 'bg-rose-600 hover:bg-rose-700'
+                } disabled:opacity-50`}
+              >
+                {isSubmittingAttendanceDecision && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                Confirm {attendanceDecisionAction === 'APPROVE' ? 'Approval' : 'Rejection'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Decision Modal */}
       {decisionModal && activeItem && (

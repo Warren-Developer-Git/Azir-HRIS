@@ -9,8 +9,9 @@ import { AuditService } from '../audit/audit.service.js';
 import { LoginDto } from './dto/login.dto.js';
 import { ChangePasswordDto } from './dto/change-password.dto.js';
 import type { AuthUser } from './permissions.js';
+import { getJwtAccessSecret, getJwtRefreshSecret } from './jwt-secrets.js';
 import bcrypt from 'bcryptjs';
-import type { Response } from 'express';
+import type { Response, CookieOptions } from 'express';
 
 @Injectable()
 export class AuthService {
@@ -21,17 +22,23 @@ export class AuthService {
   ) {}
 
   private get accessSecret(): string {
-    return (
-      process.env.JWT_ACCESS_SECRET ||
-      'dev_access_secret_hrms_2026_super_secure'
-    );
+    return getJwtAccessSecret();
   }
 
   private get refreshSecret(): string {
-    return (
-      process.env.JWT_REFRESH_SECRET ||
-      'dev_refresh_secret_hrms_2026_super_secure'
-    );
+    return getJwtRefreshSecret();
+  }
+
+  private getRefreshCookieOptions(includeMaxAge: boolean): CookieOptions {
+    const base: CookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+    };
+    return includeMaxAge
+      ? { ...base, maxAge: 7 * 24 * 60 * 60 * 1000 }
+      : base;
   }
 
   async login(dto: LoginDto, res: Response) {
@@ -84,13 +91,7 @@ export class AuthService {
 
     // Set refresh token in httpOnly cookie
     // shortcut: refresh tokens can't be revoked before expiry, add a token table when logout-everywhere is needed
-    res.cookie('refresh', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie('refresh', refreshToken, this.getRefreshCookieOptions(true));
 
     const name = `${fullUser.employee.firstName} ${fullUser.employee.lastName}`.trim();
 
@@ -184,11 +185,7 @@ export class AuthService {
   }
 
   logout(res: Response) {
-    res.clearCookie('refresh', {
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-    });
+    res.clearCookie('refresh', this.getRefreshCookieOptions(false));
     return { ok: true };
   }
 

@@ -33,10 +33,10 @@ async function main() {
   await prisma.$executeRawUnsafe(`TRUNCATE "Tenant" CASCADE;`);
 
   // ==========================================
-  // TENANT 1: ACME MANILA CORP
+  // TENANT 1: Azir Company Global Tech
   // ==========================================
   const acme = await prisma.tenant.create({
-    data: { name: 'Acme Manila Corp' },
+    data: { name: 'Azir Company Global Tech' },
   });
 
   // Acme Departments
@@ -201,6 +201,8 @@ async function main() {
     hireDate: string;
     gender: Gender;
     maritalStatus: MaritalStatus;
+    basicSalary?: number;
+    allowances?: number;
   }) {
     const user = await prisma.user.create({
       data: {
@@ -225,6 +227,8 @@ async function main() {
         hireDate: new Date(data.hireDate),
         gender: data.gender,
         maritalStatus: data.maritalStatus,
+        basicSalary: data.basicSalary ?? 35000.00,
+        allowances: data.allowances ?? 2500.00,
       },
     });
 
@@ -233,9 +237,9 @@ async function main() {
 
   // 1. Acme Dept Head (No manager)
   const depthead = await createEmp(acme.id, {
-    email: 'depthead@acme.test',
+    email: 'depthead@acgt.test',
     roles: ['MANAGER', 'EMPLOYEE'],
-    employeeNo: 'ACM-001',
+    employeeNo: 'ACGT-001',
     firstName: 'Eduardo',
     lastName: 'Santos',
     departmentId: acmeOps.id,
@@ -247,9 +251,9 @@ async function main() {
 
   // 2. Admin (reports to depthead)
   const admin = await createEmp(acme.id, {
-    email: 'admin@acme.test',
+    email: 'admin@acgt.test',
     roles: ['ADMIN', 'EMPLOYEE'],
-    employeeNo: 'ACM-002',
+    employeeNo: 'ACGT-002',
     firstName: 'Alejandro',
     lastName: 'Reyes',
     departmentId: acmeEng.id,
@@ -262,9 +266,9 @@ async function main() {
 
   // 3. HR 1 (reports to depthead)
   const hr = await createEmp(acme.id, {
-    email: 'hr@acme.test',
+    email: 'hr@acgt.test',
     roles: ['HR', 'EMPLOYEE'],
-    employeeNo: 'ACM-003',
+    employeeNo: 'ACGT-003',
     firstName: 'Maria',
     lastName: 'Clara',
     departmentId: acmeHrDept.id,
@@ -277,9 +281,9 @@ async function main() {
 
   // 4. HR 2 (reports to depthead)
   const hr2 = await createEmp(acme.id, {
-    email: 'hr2@acme.test',
+    email: 'hr2@acgt.test',
     roles: ['HR', 'EMPLOYEE'],
-    employeeNo: 'ACM-004',
+    employeeNo: 'ACGT-004',
     firstName: 'Corazon',
     lastName: 'Aquino',
     departmentId: acmeHrDept.id,
@@ -292,9 +296,9 @@ async function main() {
 
   // 5. Manager (reports to depthead)
   const manager = await createEmp(acme.id, {
-    email: 'manager@acme.test',
+    email: 'manager@acgt.test',
     roles: ['MANAGER', 'EMPLOYEE'],
-    employeeNo: 'ACM-005',
+    employeeNo: 'ACGT-005',
     firstName: 'Manuel',
     lastName: 'Quezon',
     departmentId: acmeEng.id,
@@ -307,9 +311,9 @@ async function main() {
 
   // 6. Employee (reports to manager)
   const employee = await createEmp(acme.id, {
-    email: 'employee@acme.test',
+    email: 'employee@acgt.test',
     roles: ['EMPLOYEE'],
-    employeeNo: 'ACM-006',
+    employeeNo: 'ACGT-006',
     firstName: 'Gabriela',
     lastName: 'Silang',
     departmentId: acmeEng.id,
@@ -322,9 +326,9 @@ async function main() {
 
   // 7. Dev 1 (reports to manager)
   const dev1 = await createEmp(acme.id, {
-    email: 'dev1@acme.test',
+    email: 'dev1@acgt.test',
     roles: ['EMPLOYEE'],
-    employeeNo: 'ACM-007',
+    employeeNo: 'ACGT-007',
     firstName: 'Jose',
     lastName: 'Rizal',
     departmentId: acmeEng.id,
@@ -337,9 +341,9 @@ async function main() {
 
   // 8. Dev 2 (reports to manager)
   const dev2 = await createEmp(acme.id, {
-    email: 'dev2@acme.test',
+    email: 'dev2@acgt.test',
     roles: ['EMPLOYEE'],
-    employeeNo: 'ACM-008',
+    employeeNo: 'ACGT-008',
     firstName: 'Teresa',
     lastName: 'Magbanua',
     departmentId: acmeEng.id,
@@ -352,9 +356,9 @@ async function main() {
 
   // 9. Ops 1 (reports to manager)
   const ops1 = await createEmp(acme.id, {
-    email: 'ops1@acme.test',
+    email: 'ops1@acgt.test',
     roles: ['EMPLOYEE'],
-    employeeNo: 'ACM-009',
+    employeeNo: 'ACGT-009',
     firstName: 'Andres',
     lastName: 'Bonifacio',
     departmentId: acmeEng.id,
@@ -367,9 +371,9 @@ async function main() {
 
   // 10. Designer (reports to manager)
   const designer = await createEmp(acme.id, {
-    email: 'designer@acme.test',
+    email: 'designer@acgt.test',
     roles: ['EMPLOYEE'],
-    employeeNo: 'ACM-010',
+    employeeNo: 'ACGT-010',
     firstName: 'Melchora',
     lastName: 'Aquino',
     departmentId: acmeEng.id,
@@ -382,9 +386,9 @@ async function main() {
 
   // 11. Analyst (reports to manager)
   const analyst = await createEmp(acme.id, {
-    email: 'analyst@acme.test',
+    email: 'analyst@acgt.test',
     roles: ['EMPLOYEE'],
-    employeeNo: 'ACM-011',
+    employeeNo: 'ACGT-011',
     firstName: 'Apolinario',
     lastName: 'Mabini',
     departmentId: acmeEng.id,
@@ -398,9 +402,9 @@ async function main() {
   // 12. Newhire (hired 3 months ago, reports to depthead)
   const threeMonthsAgo = addDays(today, -90);
   const newhire = await createEmp(acme.id, {
-    email: 'newhire@acme.test',
+    email: 'newhire@acgt.test',
     roles: ['EMPLOYEE'],
-    employeeNo: 'ACM-012',
+    employeeNo: 'ACGT-012',
     firstName: 'Juan',
     lastName: 'Luna',
     departmentId: acmeOps.id,
@@ -784,6 +788,199 @@ async function main() {
       }
     }
   }
+
+  // Seed Payroll Periods for Acme
+  await prisma.payrollPeriod.createMany({
+    data: [
+      {
+        tenantId: acme.id,
+        name: 'October 2026 - Second Half',
+        cutoffType: 'SECOND_HALF',
+        startDate: new Date('2026-10-16'),
+        endDate: new Date('2026-10-31'),
+        payDate: new Date('2026-10-31'),
+        workingDays: 11,
+      },
+      {
+        tenantId: acme.id,
+        name: 'November 2026 - First Half',
+        cutoffType: 'FIRST_HALF',
+        startDate: new Date('2026-11-01'),
+        endDate: new Date('2026-11-15'),
+        payDate: new Date('2026-11-15'),
+        workingDays: 10,
+      },
+      {
+        tenantId: acme.id,
+        name: 'November 2026 - Second Half',
+        cutoffType: 'SECOND_HALF',
+        startDate: new Date('2026-11-16'),
+        endDate: new Date('2026-11-30'),
+        payDate: new Date('2026-11-30'),
+        workingDays: 10,
+      },
+    ],
+  });
+
+  // Seed Payroll Periods for Bayanihan
+  await prisma.payrollPeriod.createMany({
+    data: [
+      {
+        tenantId: bayanihan.id,
+        name: 'November 2026 - First Half',
+        cutoffType: 'FIRST_HALF',
+        startDate: new Date('2026-11-01'),
+        endDate: new Date('2026-11-15'),
+        payDate: new Date('2026-11-15'),
+        workingDays: 10,
+      },
+      {
+        tenantId: bayanihan.id,
+        name: 'November 2026 - Second Half',
+        cutoffType: 'SECOND_HALF',
+        startDate: new Date('2026-11-16'),
+        endDate: new Date('2026-11-30'),
+        payDate: new Date('2026-11-30'),
+        workingDays: 10,
+      },
+    ],
+  });
+
+  // Seed Sample Attendance Records for Acme (Nov 2026 - Asia/Manila UTC+8: 09:00 PHT = 01:00 UTC, 18:00 PHT = 10:00 UTC)
+  await prisma.attendanceRecord.createMany({
+    data: [
+      // Gabriela Silang (employee@acgt.test)
+      {
+        tenantId: acme.id,
+        employeeId: employee.emp.id,
+        date: new Date('2026-11-03T00:00:00.000Z'),
+        timeIn: new Date('2026-11-03T00:55:00.000Z'), // 08:55 AM PHT
+        timeOut: new Date('2026-11-03T10:05:00.000Z'), // 06:05 PM PHT
+        locationType: 'OFFICE',
+        source: 'WEB_PUNCH',
+        status: 'PRESENT',
+        lateMinutes: 0,
+        undertimeMinutes: 0,
+        notes: 'On time at Makati HQ',
+      },
+      {
+        tenantId: acme.id,
+        employeeId: employee.emp.id,
+        date: new Date('2026-11-04T00:00:00.000Z'),
+        timeIn: new Date('2026-11-04T01:35:00.000Z'), // 09:35 AM PHT (35 mins late)
+        timeOut: new Date('2026-11-04T10:02:00.000Z'), // 06:02 PM PHT
+        locationType: 'OFFICE',
+        source: 'WEB_PUNCH',
+        status: 'LATE',
+        lateMinutes: 35,
+        undertimeMinutes: 0,
+        notes: 'Heavy EDSA traffic',
+      },
+      {
+        tenantId: acme.id,
+        employeeId: employee.emp.id,
+        date: new Date('2026-11-05T00:00:00.000Z'),
+        timeIn: new Date('2026-11-05T01:08:00.000Z'), // 09:08 AM PHT (within 15m grace)
+        timeOut: new Date('2026-11-05T10:15:00.000Z'), // 06:15 PM PHT
+        locationType: 'OFFICE',
+        source: 'WEB_PUNCH',
+        status: 'PRESENT',
+        lateMinutes: 0,
+        undertimeMinutes: 0,
+        notes: 'Within grace period',
+      },
+      {
+        tenantId: acme.id,
+        employeeId: employee.emp.id,
+        date: new Date('2026-11-06T00:00:00.000Z'),
+        locationType: 'FIELD_CLIENT_SITE',
+        source: 'CORRECTION_OB',
+        status: 'OFFICIAL_BUSINESS',
+        lateMinutes: 0,
+        undertimeMinutes: 0,
+        notes: 'OB: BGC Corporate Tower - ERP client deployment & UAT (Note: Approved field pass)',
+      },
+      {
+        tenantId: acme.id,
+        employeeId: employee.emp.id,
+        date: new Date('2026-11-11T00:00:00.000Z'),
+        timeIn: new Date('2026-11-11T00:58:00.000Z'), // 08:58 AM PHT
+        timeOut: new Date('2026-11-11T10:00:00.000Z'), // 06:00 PM PHT
+        locationType: 'REMOTE_WFH',
+        source: 'WEB_PUNCH',
+        status: 'PRESENT',
+        lateMinutes: 0,
+        undertimeMinutes: 0,
+        notes: 'Approved WFH sprint focus day',
+      },
+      // Jose Rizal (dev1@acgt.test)
+      {
+        tenantId: acme.id,
+        employeeId: dev1.emp.id,
+        date: new Date('2026-11-11T00:00:00.000Z'),
+        timeIn: new Date('2026-11-11T01:02:00.000Z'),
+        timeOut: new Date('2026-11-11T10:10:00.000Z'),
+        locationType: 'OFFICE',
+        source: 'WEB_PUNCH',
+        status: 'PRESENT',
+        lateMinutes: 0,
+        undertimeMinutes: 0,
+      },
+      // Teresa Magbanua (dev2@acgt.test)
+      {
+        tenantId: acme.id,
+        employeeId: dev2.emp.id,
+        date: new Date('2026-11-11T00:00:00.000Z'),
+        timeIn: new Date('2026-11-11T01:22:00.000Z'), // 09:22 AM PHT
+        timeOut: new Date('2026-11-11T10:00:00.000Z'),
+        locationType: 'OFFICE',
+        source: 'WEB_PUNCH',
+        status: 'LATE',
+        lateMinutes: 22,
+        undertimeMinutes: 0,
+      },
+    ],
+  });
+
+  // Seed Official Business (OB) & Missed Punch Correction Requests for Acme
+  await prisma.attendanceCorrectionRequest.createMany({
+    data: [
+      {
+        tenantId: acme.id,
+        employeeId: employee.emp.id,
+        date: new Date('2026-11-06T00:00:00.000Z'),
+        type: 'OFFICIAL_BUSINESS',
+        locationType: 'FIELD_CLIENT_SITE',
+        destination: 'BGC Corporate Tower, Taguig',
+        reason: 'Full-day ERP client deployment & stakeholder UAT session',
+        status: 'APPROVED',
+        decidedById: manager.emp.id,
+        decidedAt: new Date('2026-11-06T02:00:00.000Z'),
+        decisionNote: 'Approved field pass',
+      },
+      {
+        tenantId: acme.id,
+        employeeId: dev1.emp.id,
+        date: new Date('2026-11-13T00:00:00.000Z'),
+        type: 'OFFICIAL_BUSINESS',
+        locationType: 'FIELD_CLIENT_SITE',
+        destination: 'Ortigas Center Data Facility',
+        reason: 'On-site database server migration and security audit with client IT',
+        status: 'PENDING',
+      },
+      {
+        tenantId: acme.id,
+        employeeId: dev2.emp.id,
+        date: new Date('2026-11-12T00:00:00.000Z'),
+        type: 'MISSED_PUNCH',
+        proposedTimeIn: new Date('2026-11-12T00:57:00.000Z'),
+        proposedTimeOut: new Date('2026-11-12T10:04:00.000Z'),
+        locationType: 'OFFICE',
+        reason: 'Lobby turnstile scanner was offline during morning rush; attended 9:00 AM QA standup',
+        status: 'PENDING',
+      },
+    ],
+  });
 
   console.log('Seeding completed successfully!');
 }

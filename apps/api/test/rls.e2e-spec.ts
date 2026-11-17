@@ -70,7 +70,7 @@ describe('Row-Level Security & withTenant (e2e)', () => {
           await ownerDb.user.create({
             data: {
               tenantId: tenantA,
-              email: 'actor@acme.test',
+              email: 'actor@acgt.test',
               passwordHash: 'pw',
               roles: ['ADMIN'],
             },

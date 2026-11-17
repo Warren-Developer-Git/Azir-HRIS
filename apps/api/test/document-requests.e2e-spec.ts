@@ -41,9 +41,9 @@ describe('Document Requests & Verification Flow (e2e)', () => {
       return res.body.accessToken;
     }
 
-    employeeToken = await getToken('employee@acme.test');
-    hrToken = await getToken('hr@acme.test');
-    hr2Token = await getToken('hr2@acme.test');
+    employeeToken = await getToken('employee@acgt.test');
+    hrToken = await getToken('hr@acgt.test');
+    hr2Token = await getToken('hr2@acgt.test');
 
     const typesRes = await request(app.getHttpServer())
       .get('/document-types')
@@ -215,7 +215,7 @@ describe('Document Requests & Verification Flow (e2e)', () => {
 
     expect(publicVerifyRes.status).toBe(200);
     expect(publicVerifyRes.body.isValid).toBe(true);
-    expect(publicVerifyRes.body.organization).toContain('Acme');
+    expect(publicVerifyRes.body.organization).toContain('Azir Company Global Tech');
     expect(publicVerifyRes.body.documentType).toBe('Leave Balance Certification');
     expect(publicVerifyRes.body.documentNo).toBe(issuedDoc.documentNo);
     expect(publicVerifyRes.body.issuedAt).toBeDefined();
