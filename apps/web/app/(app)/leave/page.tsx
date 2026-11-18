@@ -4,7 +4,8 @@ import React, { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { api, ApiError } from '@/lib/api';
 import { StatusBadge, LeaveStatus } from '@/components/status-badge';
-import { CalendarDays, Plus, Loader2, AlertCircle } from 'lucide-react';
+import { StatCardsSkeleton, TableSkeleton } from '@/components/skeletons';
+import { CalendarDays, Plus, AlertCircle } from 'lucide-react';
 
 interface LeaveBalance {
   leaveTypeId: string;
@@ -112,14 +113,7 @@ export default function LeavePage() {
         </h2>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="h-28 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-100/50 dark:bg-neutral-900/50 animate-pulse"
-              />
-            ))}
-          </div>
+          <StatCardsSkeleton count={3} />
         ) : balances.length === 0 ? (
           <div className="p-6 text-center border border-dashed border-neutral-300 dark:border-neutral-700 rounded-lg text-neutral-500 text-sm">
             No yearly leave balances assigned for this period.
@@ -186,10 +180,7 @@ export default function LeavePage() {
         {/* Requests Table */}
         <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
           {isLoading ? (
-            <div className="p-8 flex items-center justify-center text-neutral-500">
-              <Loader2 className="w-5 h-5 animate-spin mr-2" />
-              <span>Loading leave records...</span>
-            </div>
+            <TableSkeleton rows={5} columns={5} embedded />
           ) : filteredRequests.length === 0 ? (
             <div className="p-10 text-center text-neutral-500">
               <CalendarDays className="w-8 h-8 mx-auto mb-2 text-neutral-400" />

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { api, ApiError, escapeHtml, getAccessToken } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { DetailPageSkeleton, TableSkeleton } from '@/components/skeletons';
 import { COMPANY_LOGO_DATA_URL, HR_SIGNATURE_DATA_URL } from '@/lib/document-assets';
 import QRCode from 'qrcode';
 import {
@@ -872,10 +873,7 @@ function PayrollContent() {
 
       {/* Main Tab Content */}
       {isLoading ? (
-        <div className="p-12 text-center text-neutral-500 flex flex-col items-center justify-center gap-3">
-          <RefreshCw className="w-6 h-6 animate-spin text-neutral-400" />
-          <span>Loading payroll data...</span>
-        </div>
+        <TableSkeleton rows={6} columns={6} showToolbar />
       ) : error ? (
         <div className="p-6 rounded-xl bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400 border border-red-200 dark:border-red-900">
           <div className="font-semibold flex items-center gap-2">
@@ -2201,10 +2199,7 @@ function PayrollContent() {
             {/* Sheet Viewport */}
             <div className="p-6 overflow-y-auto flex-1 bg-neutral-100 dark:bg-neutral-950/60">
               {isLoadingPayslip ? (
-                <div className="p-16 text-center text-neutral-500 flex flex-col items-center justify-center gap-3">
-                  <RefreshCw className="w-8 h-8 animate-spin text-neutral-400" />
-                  <span>Loading payslip...</span>
-                </div>
+                <DetailPageSkeleton cards={2} />
               ) : payslipData ? (
                 <div
                   id="printable-payslip-sheet"
@@ -2460,14 +2455,7 @@ function PayrollContent() {
 
 export default function PayrollPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="p-12 text-center">
-          <div className="w-8 h-8 border-2 border-neutral-400 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-          <p className="text-sm font-medium text-neutral-500">Loading payroll...</p>
-        </div>
-      }
-    >
+    <Suspense fallback={<TableSkeleton rows={6} columns={6} showToolbar />}>
       <PayrollContent />
     </Suspense>
   );

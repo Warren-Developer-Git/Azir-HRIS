@@ -1,5 +1,7 @@
 'use client';
 
+import { AppShellSkeleton } from '@/components/skeletons';
+
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
@@ -16,14 +18,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [user, isLoading, router]);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-6 h-6 border-2 border-neutral-900 dark:border-neutral-100 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm font-medium text-neutral-500">Loading session...</p>
-        </div>
-      </div>
-    );
+    return <AppShellSkeleton label="Loading session..." />;
   }
 
   if (!user) {

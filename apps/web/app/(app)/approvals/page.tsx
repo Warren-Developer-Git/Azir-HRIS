@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { StatusBadge, LeaveStatus } from '@/components/status-badge';
+import { TableSkeleton } from '@/components/skeletons';
 import {
   CheckSquare,
   Clock,
@@ -290,10 +291,7 @@ export default function ApprovalsPage() {
       {approvalCategory === 'leave' && (
         <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
         {isLoading ? (
-          <div className="p-12 flex flex-col items-center justify-center text-neutral-500">
-            <Loader2 className="w-6 h-6 animate-spin mb-3" />
-            <p className="text-sm">Loading pending leave requests...</p>
-          </div>
+          <TableSkeleton rows={5} columns={5} embedded />
         ) : requests.length === 0 ? (
           <div className="p-12 text-center text-neutral-500">
             <CheckSquare className="w-10 h-10 mx-auto mb-3 text-neutral-400" />
@@ -485,10 +483,7 @@ export default function ApprovalsPage() {
       {approvalCategory === 'attendance' && (
         <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
           {isLoadingAttendance ? (
-            <div className="p-12 flex flex-col items-center justify-center text-neutral-500">
-              <Loader2 className="w-6 h-6 animate-spin mb-3" />
-              <p className="text-sm">Loading pending attendance requests...</p>
-            </div>
+            <TableSkeleton rows={5} columns={5} embedded />
           ) : attendanceRequests.length === 0 ? (
             <div className="p-12 text-center text-neutral-500">
               <CheckSquare className="w-10 h-10 mx-auto mb-3 text-neutral-400" />

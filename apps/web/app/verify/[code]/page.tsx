@@ -1,5 +1,7 @@
 'use client';
 
+import { DetailPageSkeleton } from '@/components/skeletons';
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -17,7 +19,6 @@ import {
   Clock,
   ArrowRight,
   Search,
-  Loader2,
   ExternalLink,
 } from 'lucide-react';
 
@@ -117,15 +118,7 @@ export default function DocumentVerificationPage() {
       {/* Main Content Area */}
       <main className="flex-1 max-w-3xl w-full mx-auto px-4 py-10 sm:py-16">
         {isLoading ? (
-          <div className="p-12 text-center bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
-            <Loader2 className="w-8 h-8 animate-spin text-neutral-400 mx-auto mb-4" />
-            <h2 className="text-base font-medium text-neutral-800 dark:text-neutral-200">
-              Validating Document Authenticity...
-            </h2>
-            <p className="text-xs text-neutral-500 mt-1">
-              Querying cryptographically signed registry for verification code: {code}
-            </p>
-          </div>
+          <DetailPageSkeleton cards={2} />
         ) : data && data.isValid ? (
           /* Valid State */
           <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-emerald-500/30 dark:border-emerald-500/30 shadow-xl overflow-hidden">

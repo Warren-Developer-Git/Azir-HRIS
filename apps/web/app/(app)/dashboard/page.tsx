@@ -1,5 +1,7 @@
 'use client';
 
+import { DashboardSkeleton } from '@/components/skeletons';
+
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { api, ApiError } from '@/lib/api';
@@ -312,10 +314,7 @@ export default function DashboardPage() {
       )}
 
       {isLoading ? (
-        <div className="p-12 flex flex-col items-center justify-center text-neutral-500">
-          <Loader2 className="w-6 h-6 animate-spin mb-3" />
-          <p className="text-sm">Loading workspace dashboard...</p>
-        </div>
+        <DashboardSkeleton />
       ) : (
         <>
           {/* Today's Attendance Quick Punch Strip */}

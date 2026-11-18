@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { api, ApiError, escapeHtml } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { CompanyLogo } from '@/components/company-logo';
+import { TableSkeleton } from '@/components/skeletons';
 import { COMPANY_LOGO_DATA_URL, HR_SIGNATURE_DATA_URL } from '@/lib/document-assets';
 import QRCode from 'qrcode';
 import {
@@ -736,10 +737,7 @@ function DocumentsContent() {
       {/* Main Table */}
       <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
         {isLoading ? (
-          <div className="p-12 flex flex-col items-center justify-center text-neutral-500">
-            <Loader2 className="w-6 h-6 animate-spin mb-3" />
-            <p className="text-sm">Loading requests...</p>
-          </div>
+          <TableSkeleton rows={5} columns={5} embedded />
         ) : requests.length === 0 ? (
           <div className="p-12 text-center text-neutral-500">
             <FileText className="w-10 h-10 mx-auto mb-3 text-neutral-400" />
@@ -1352,14 +1350,7 @@ function DocumentsContent() {
 
 export default function DocumentsPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="p-12 text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-neutral-400 mx-auto mb-2" />
-          <p className="text-sm font-medium text-neutral-500">Loading documents...</p>
-        </div>
-      }
-    >
+    <Suspense fallback={<TableSkeleton rows={5} columns={5} showToolbar />}>
       <DocumentsContent />
     </Suspense>
   );

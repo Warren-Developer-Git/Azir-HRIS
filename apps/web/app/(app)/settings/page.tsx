@@ -3,12 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { TableSkeleton } from '@/components/skeletons';
 import {
   Sliders,
   Calendar,
   Building2,
   Clock,
-  Loader2,
   AlertCircle,
   Plus,
   Pencil,
@@ -475,10 +475,7 @@ export default function SettingsPage() {
       {/* Table Content */}
       <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden shadow-sm">
         {isLoading ? (
-          <div className="p-12 flex flex-col items-center justify-center text-neutral-500">
-            <Loader2 className="w-6 h-6 animate-spin mb-3" />
-            <p className="text-sm">Loading configuration...</p>
-          </div>
+          <TableSkeleton rows={5} columns={5} embedded />
         ) : tab === 'leaveTypes' ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">

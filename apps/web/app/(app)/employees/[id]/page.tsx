@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { DetailPageSkeleton, TableSkeleton } from '@/components/skeletons';
 import {
   ArrowLeft,
   User,
@@ -304,12 +305,7 @@ export default function EmployeeDetailPage() {
   const canEdit = can('employee.write') || can('role.assign');
 
   if (isLoading) {
-    return (
-      <div className="p-12 flex flex-col items-center justify-center text-neutral-500">
-        <Loader2 className="w-6 h-6 animate-spin mb-3" />
-        <p className="text-sm">Loading employee profile...</p>
-      </div>
-    );
+    return <DetailPageSkeleton cards={3} />;
   }
 
   if (error || !employee) {
@@ -638,10 +634,7 @@ export default function EmployeeDetailPage() {
         </div>
 
         {isLoadingBalances ? (
-          <div className="py-8 flex flex-col items-center justify-center text-neutral-500">
-            <Loader2 className="w-5 h-5 animate-spin mb-2" />
-            <p className="text-xs">Loading balances for {balanceYear}...</p>
-          </div>
+          <TableSkeleton rows={4} columns={5} embedded />
         ) : balances.length === 0 ? (
           <div className="py-6 text-center text-xs text-neutral-500">
             No annual leave quotas granted for {balanceYear}.

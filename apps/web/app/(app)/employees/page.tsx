@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { UserAvatar } from '@/components/user-avatar';
+import { TableSkeleton } from '@/components/skeletons';
 import {
   SendEmailModal,
   type EmailRecipientTarget,
@@ -13,7 +14,6 @@ import {
   Users,
   Search,
   Plus,
-  Loader2,
   AlertCircle,
   Shield,
   ChevronLeft,
@@ -193,10 +193,7 @@ export default function EmployeesPage() {
       {/* Table */}
       <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
         {isLoading ? (
-          <div className="p-12 flex flex-col items-center justify-center text-neutral-500">
-            <Loader2 className="w-6 h-6 animate-spin mb-3" />
-            <p className="text-sm">Loading employees...</p>
-          </div>
+          <TableSkeleton rows={6} columns={5} embedded />
         ) : employees.length === 0 ? (
           <div className="p-12 text-center text-neutral-500">
             <Users className="w-10 h-10 mx-auto mb-3 text-neutral-400" />

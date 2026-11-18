@@ -128,13 +128,13 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run web utility tests
-        run: node --test apps/web/lib/proxy-url.test.ts apps/web/lib/wakeup-retry.test.ts
+        run: node --test apps/web/lib/proxy-url.test.ts apps/web/lib/wakeup-retry.test.ts apps/web/lib/skeleton-utils.test.ts
 
       - name: Typecheck Web
         run: pnpm --filter web exec tsc --noEmit --incremental false
 
       - name: Lint deployment & core web helper files
-        run: pnpm --filter web exec eslint "lib/api.ts" "lib/proxy-url.ts" "lib/wakeup-retry.ts" "components/user-avatar.tsx" "next.config.ts" "app/page.tsx" "app/login/page.tsx"
+        run: pnpm --filter web exec eslint "lib/api.ts" "lib/proxy-url.ts" "lib/wakeup-retry.ts" "lib/skeleton-utils.ts" "components/skeletons.tsx" "components/user-avatar.tsx" "next.config.ts" "app/page.tsx" "app/login/page.tsx" "app/(app)/layout.tsx"
 
       - name: Build Next.js Web app
         run: pnpm --filter web build

@@ -2,9 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { api, ApiError } from '@/lib/api';
+import { TableSkeleton } from '@/components/skeletons';
 import {
   ShieldCheck,
-  Loader2,
   AlertCircle,
   ChevronDown,
   ChevronRight,
@@ -164,10 +164,7 @@ export default function AuditLogsPage() {
       {/* Logs Table */}
       <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden shadow-sm">
         {isLoading ? (
-          <div className="p-12 flex flex-col items-center justify-center text-neutral-500">
-            <Loader2 className="w-6 h-6 animate-spin mb-3" />
-            <p className="text-sm">Fetching audit trail entries...</p>
-          </div>
+          <TableSkeleton rows={6} columns={5} embedded />
         ) : logs.length === 0 ? (
           <div className="p-12 text-center text-neutral-500">
             <ShieldCheck className="w-10 h-10 mx-auto mb-3 text-neutral-400" />

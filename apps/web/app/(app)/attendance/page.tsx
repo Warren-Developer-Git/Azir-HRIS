@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { TableSkeleton } from '@/components/skeletons';
 import {
   Clock,
   MapPin,
@@ -741,9 +742,7 @@ function AttendanceContent() {
             </div>
 
             {isLoadingDtr ? (
-              <div className="p-12 text-center text-sm text-neutral-500 dark:text-neutral-400 flex items-center justify-center gap-2">
-                <Loader2 className="w-5 h-5 animate-spin" /> Loading attendance records...
-              </div>
+              <TableSkeleton rows={6} columns={5} embedded />
             ) : myDtr.length === 0 ? (
               <div className="p-12 text-center text-sm text-neutral-500 dark:text-neutral-400">
                 No attendance records found for this month.
@@ -832,9 +831,7 @@ function AttendanceContent() {
           {/* Requests List Table */}
           <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden shadow-sm">
             {isLoadingCorrections ? (
-              <div className="p-12 text-center text-sm text-neutral-500 dark:text-neutral-400 flex items-center justify-center gap-2">
-                <Loader2 className="w-5 h-5 animate-spin" /> Loading requests...
-              </div>
+              <TableSkeleton rows={5} columns={5} embedded />
             ) : corrections.length === 0 ? (
               <div className="p-12 text-center text-sm text-neutral-500 dark:text-neutral-400">
                 No Official Business slips or attendance correction requests filed yet.
@@ -948,9 +945,7 @@ function AttendanceContent() {
 
           <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden shadow-sm">
             {isLoadingTeam ? (
-              <div className="p-12 text-center text-sm text-neutral-500 dark:text-neutral-400 flex items-center justify-center gap-2">
-                <Loader2 className="w-5 h-5 animate-spin" /> Loading team roster...
-              </div>
+              <TableSkeleton rows={5} columns={5} embedded />
             ) : teamList.length === 0 ? (
               <div className="p-12 text-center text-sm text-neutral-500 dark:text-neutral-400">
                 No team members found.
@@ -1031,9 +1026,7 @@ function AttendanceContent() {
 
           <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden shadow-sm">
             {isLoadingApprovals ? (
-              <div className="p-12 text-center text-sm text-neutral-500 dark:text-neutral-400 flex items-center justify-center gap-2">
-                <Loader2 className="w-5 h-5 animate-spin" /> Loading pending approvals...
-              </div>
+              <TableSkeleton rows={5} columns={5} embedded />
             ) : pendingApprovals.length === 0 ? (
               <div className="p-12 text-center text-neutral-500">
                 <CheckSquare className="w-10 h-10 mx-auto mb-3 text-neutral-400" />
@@ -1391,13 +1384,7 @@ function AttendanceContent() {
 
 export default function AttendancePage() {
   return (
-    <Suspense
-      fallback={
-        <div className="p-12 text-center text-sm text-neutral-500 dark:text-neutral-400">
-          Loading Attendance & DTR...
-        </div>
-      }
-    >
+    <Suspense fallback={<TableSkeleton rows={6} columns={5} showToolbar />}>
       <AttendanceContent />
     </Suspense>
   );

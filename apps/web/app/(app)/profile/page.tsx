@@ -1,5 +1,7 @@
 'use client';
 
+import { DetailPageSkeleton } from '@/components/skeletons';
+
 import React, { useEffect, useState, useRef } from 'react';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
@@ -277,12 +279,7 @@ export default function ProfilePage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="py-20 flex flex-col items-center justify-center text-neutral-500">
-        <Loader2 className="w-6 h-6 animate-spin mb-3" />
-        <p className="text-sm">Loading your profile...</p>
-      </div>
-    );
+    return <DetailPageSkeleton cards={3} />;
   }
 
   if (error && !profile) {

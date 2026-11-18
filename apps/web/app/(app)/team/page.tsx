@@ -4,13 +4,13 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { TableSkeleton } from '@/components/skeletons';
 import {
   SendEmailModal,
   type EmailRecipientTarget,
 } from '@/components/send-email-modal';
 import {
   Users,
-  Loader2,
   AlertCircle,
   CalendarDays,
   ArrowRight,
@@ -104,10 +104,7 @@ export default function TeamPage() {
       {/* Grid or Table of Team */}
       <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
         {isLoading ? (
-          <div className="p-12 flex flex-col items-center justify-center text-neutral-500">
-            <Loader2 className="w-6 h-6 animate-spin mb-3" />
-            <p className="text-sm">Loading your team roster...</p>
-          </div>
+          <TableSkeleton rows={5} columns={4} embedded />
         ) : team.length === 0 ? (
           <div className="p-12 text-center text-neutral-500">
             <Users className="w-10 h-10 mx-auto mb-3 text-neutral-400" />
