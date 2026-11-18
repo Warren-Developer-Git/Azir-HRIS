@@ -1,3 +1,5 @@
+import { fetchWithWakeupRetry } from './wakeup-retry';
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -9,6 +11,25 @@ export class ApiError extends Error {
 }
 
 let inMemoryToken: string | null = null;
+const wakeupListeners = new Set<(waking: boolean) => void>();
+
+export function subscribeWakeupStatus(listener: (waking: boolean) => void): () => void {
+  wakeupListeners.add(listener);
+  return () => {
+    wakeupListeners.delete(listener);
+  };
+}
+
+function notifyWakeupStatus(waking: boolean) {
+  for (const listener of wakeupListeners) {
+    listener(waking);
+  }
+}
+
+/** Silently wake the API container in the background on cold loads. */
+export function warmUpBackend(): void {
+  void fetch('/api/health', { method: 'GET', cache: 'no-store' }).catch(() => undefined);
+}
 
 export function setAccessToken(token: string | null) {
   inMemoryToken = token;
@@ -59,11 +80,22 @@ async function fetchWithAuthRetry(path: string, init?: RequestInit): Promise<Res
     headers.set('Content-Type', 'application/json');
   }
 
-  const res = await fetch(url, {
-    ...init,
-    headers,
-    credentials: 'include',
-  });
+  const res = await fetchWithWakeupRetry(
+    () =>
+      fetch(url, {
+        ...init,
+        headers,
+        credentials: 'include',
+      }),
+    {
+      path,
+      method: init?.method || 'GET',
+      maxRetries: 2,
+      delayMs: 2500,
+      onWakingUp: () => notifyWakeupStatus(true),
+    },
+  );
+  notifyWakeupStatus(false);
 
   if (
     res.status === 401 &&

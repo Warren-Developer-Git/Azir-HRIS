@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
+import { subscribeWakeupStatus, warmUpBackend } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { Shield, ArrowRight, Loader2, KeyRound } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -15,9 +16,23 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isWakingUp, setIsWakingUp] = useState(false);
+
+  // Trigger background health ping on mount so sleeping Render container starts booting right away
+  useEffect(() => {
+    warmUpBackend();
+    return subscribeWakeupStatus(setIsWakingUp);
+  }, []);
+
+  // Show helpful cold-start notice if sign-in takes > 3.5 seconds
+  useEffect(() => {
+    if (!isSubmitting) return;
+    const timer = setTimeout(() => setIsWakingUp(true), 3500);
+    return () => clearTimeout(timer);
+  }, [isSubmitting]);
 
   // If already logged in, redirect to dashboard
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isLoading && user) {
       router.push('/dashboard');
     }
@@ -30,10 +45,11 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-    } catch (err: any) {
-      setError(err.message || 'Invalid email or password');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Invalid email or password');
     } finally {
       setIsSubmitting(false);
+      setIsWakingUp(false);
     }
   };
 
@@ -42,14 +58,6 @@ export default function LoginPage() {
     setPassword('Demo1234!');
     setError(null);
   };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black">
-        <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
-      </div>
-    );
-  }
 
   return (
     <div className="relative min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-neutral-50 dark:bg-neutral-950">
@@ -71,6 +79,11 @@ export default function LoginPage() {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4">
         <div className="bg-white dark:bg-neutral-900 py-8 px-6 shadow-sm border border-neutral-200 dark:border-neutral-800 rounded-xl sm:px-8">
           <form className="space-y-5" onSubmit={handleSubmit}>
+            {isWakingUp && !error && (
+              <div className="p-3 text-xs text-neutral-700 dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md">
+                Waking up free server after inactivity (~30s on first load). Please wait...
+              </div>
+            )}
             {error && (
               <div className="p-3 text-sm text-red-600 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-md">
                 {error}
