@@ -28,7 +28,7 @@ cp apps/web/.env.example apps/web/.env
 ```
 Key optional integrations in `apps/api/.env`:
 - **Cloud Object Storage:** `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (`sb_secret_...` or `service_role` JWT), `SUPABASE_STORAGE_BUCKET` (falls back to `apps/api/uploads/` local disk when omitted).
-- **Email Delivery:** `SMTP_USER` + `SMTP_PASS` (Gmail App Password) and/or `RESEND_API_KEY`, plus `EMAIL_DEMO_OVERRIDE` for routing synthetic `.test` demo notifications safely (falls back to `LOG_ONLY` mode when omitted).
+- **Email Delivery:** Gmail REST API over HTTPS (`GMAIL_CLIENT_ID` + `GMAIL_CLIENT_SECRET` + `GMAIL_REFRESH_TOKEN`, optional `GMAIL_SENDER_EMAIL` — recommended on Render free tier), `SMTP_USER` + `SMTP_PASS` (Gmail App Password), and/or `RESEND_API_KEY`, plus `EMAIL_DEMO_OVERRIDE` for routing synthetic `.test` demo notifications safely (falls back to `LOG_ONLY` mode when omitted).
 
 ### 3. Initialize PostgreSQL Roles, Migrations & Seed Data
 ```bash

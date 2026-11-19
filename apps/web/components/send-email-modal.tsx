@@ -103,7 +103,7 @@ export function SendEmailModal({
     try {
       const res = await api<{
         delivered: boolean;
-        mode: 'GMAIL_SMTP' | 'RESEND_API' | 'LOG_ONLY';
+        mode: 'GMAIL_API' | 'GMAIL_SMTP' | 'RESEND_API' | 'LOG_ONLY';
         routedTo: string;
         subject: string;
         meetingPlatform: string | null;
@@ -121,15 +121,21 @@ export function SendEmailModal({
       });
 
       const providerLabel =
-        res.mode === 'GMAIL_SMTP' ? 'Gmail SMTP' : 'Resend API';
+        res.mode === 'GMAIL_API'
+          ? 'Gmail HTTPS API'
+          : res.mode === 'GMAIL_SMTP'
+            ? 'Gmail SMTP'
+            : 'Resend API';
 
       const statusText = res.delivered
         ? `Email "${res.subject}" sent via ${providerLabel} to ${res.routedTo} (and in-app notification saved).`
-        : res.mode === 'GMAIL_SMTP'
-          ? `Email "${res.subject}" saved as in-app notification, but Gmail SMTP delivery failed (${res.note || 'verify SMTP_USER and Google App Password SMTP_PASS in api/.env'}).`
-          : res.mode === 'RESEND_API'
-            ? `Email "${res.subject}" saved as in-app notification, but inbox delivery failed (${res.note || 'Resend rejected request'}). Note: Resend's free onboarding@resend.dev sender only delivers to your own registered Gmail unless a custom domain is verified.`
-            : `Email "${res.subject}" logged & pushed as in-app notification (${res.mode} mode — configure SMTP_USER/SMTP_PASS or RESEND_API_KEY in api/.env for live inbox delivery).`;
+        : res.mode === 'GMAIL_API'
+          ? `Email "${res.subject}" saved as in-app notification, but Gmail HTTPS API delivery failed (${res.note || 'verify GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, and GMAIL_REFRESH_TOKEN'}).`
+          : res.mode === 'GMAIL_SMTP'
+            ? `Email "${res.subject}" saved as in-app notification, but Gmail SMTP delivery failed (${res.note || 'verify SMTP_USER and Google App Password SMTP_PASS in api/.env'}).`
+            : res.mode === 'RESEND_API'
+              ? `Email "${res.subject}" saved as in-app notification, but inbox delivery failed (${res.note || 'Resend rejected request'}). Note: Resend's free onboarding@resend.dev sender only delivers to your own registered Gmail unless a custom domain is verified.`
+              : `Email "${res.subject}" logged & pushed as in-app notification (${res.mode} mode — configure Gmail HTTPS API, SMTP_USER/SMTP_PASS, or RESEND_API_KEY in api/.env for live inbox delivery).`;
 
       onSent?.(statusText);
       onClose();
